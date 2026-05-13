@@ -1,14 +1,15 @@
 #include "DecisionTree.h"
+
 const int MIN_SIZE = 2;
 const int MAX_DEPTH = 5;
 
-bool isPure(vector<Passenger>& passengers) {
+bool isPure(const std::vector<Passenger>& passengers) {
     if (passengers.empty()) {
         return true;
     }
 
     int firstSurvivalStatus = passengers[0].survived;
-    for (int i = 0; i < passengers.size(); ++i) {
+    for (size_t i = 1; i < passengers.size(); ++i) {
         if (passengers[i].survived != firstSurvivalStatus) {
             return false;
         }
@@ -16,7 +17,7 @@ bool isPure(vector<Passenger>& passengers) {
     return true;
 }
 
-int findMostCommonCategory(vector<Passenger>& passengers) {
+int findMostCommonCategory(const std::vector<Passenger>& passengers) {
     if (passengers.empty()) {
         return -1;
     }
@@ -24,50 +25,46 @@ int findMostCommonCategory(vector<Passenger>& passengers) {
     int countSurvived = 0;
     int countNotSurvived = 0;
 
-    for (int i = 0; i < passengers.size(); i++) {
-        if (passengers[i].survived) {
+    for (const auto& p : passengers) {
+        if (p.survived) {
             countSurvived++;
-        }
-        else {
+        } else {
             countNotSurvived++;
         }
     }
 
-    if (countSurvived > countNotSurvived) {
-        return 1;
-    }
-    else {
-        return 0;
-    }
+    return (countSurvived > countNotSurvived) ? 1 : 0;
 }
 
-void partitionPassengers(vector<Passenger>& passengers, string& bestFeature, double bestSplit, vector<Passenger>& leftSubSet, vector<Passenger>& rightSubSet) {
-    for (int i = 0; i < passengers.size(); ++i) {
-        Passenger& passenger = passengers[i];
+void partitionPassengers(const std::vector<Passenger>& passengers,
+                         const std::string& bestFeature,
+                         double bestSplit,
+                         std::vector<Passenger>& leftSubSet,
+                         std::vector<Passenger>& rightSubSet) {
+    for (const auto& passenger : passengers) {
         if (bestFeature == "Sex" && passenger.sex <= bestSplit) {
             leftSubSet.push_back(passenger);
-        }
-        else if (bestFeature == "Pclass" && passenger.pclass == bestSplit) {
+        } else if (bestFeature == "Pclass" && passenger.pclass == bestSplit) {
             leftSubSet.push_back(passenger);
-        }
-        else {
+        } else {
             rightSubSet.push_back(passenger);
         }
     }
 }
 
-
-TreeNode* buildDecisionTree(vector<Passenger>& passengers, int depth, set<string>& usedFeatures) {
+std::unique_ptr<TreeNode> buildDecisionTree(std::vector<Passenger>& passengers,
+                                            int depth,
+                                            std::set<std::string>& usedFeatures) {
     if (passengers.empty() || depth > MAX_DEPTH) {
         return nullptr;
     }
 
-    if (passengers.size() < MIN_SIZE || isPure(passengers)) {
+    if (passengers.size() < static_cast<size_t>(MIN_SIZE) || isPure(passengers)) {
         int commonCategory = findMostCommonCategory(passengers);
-        return new TreeNode(commonCategory);
+        return std::make_unique<TreeNode>(commonCategory);
     }
 
-    string bestFeature;
+    std::string bestFeature;
     double bestSplit = -1;
     double minGini = 999999999.99;
     bool improved = false;
@@ -94,82 +91,75 @@ TreeNode* buildDecisionTree(vector<Passenger>& passengers, int depth, set<string
 
     if (!improved) {
         int commonCategory = findMostCommonCategory(passengers);
-        return new TreeNode(commonCategory);
+        return std::make_unique<TreeNode>(commonCategory);
     }
 
     usedFeatures.insert(bestFeature);
 
-    vector<Passenger> leftSubSet, rightSubSet;
+    std::vector<Passenger> leftSubSet, rightSubSet;
     partitionPassengers(passengers, bestFeature, bestSplit, leftSubSet, rightSubSet);
 
-    TreeNode* node = new TreeNode(bestFeature, bestSplit);
+    auto node = std::make_unique<TreeNode>(bestFeature, bestSplit);
     node->leftChild = buildDecisionTree(leftSubSet, depth + 1, usedFeatures);
     node->rightChild = buildDecisionTree(rightSubSet, depth + 1, usedFeatures);
 
     return node;
 }
 
-
-void printTreePreorder(TreeNode* node) {
-    if (node != nullptr) {
-        if (node->category != -1) {
-            cout << "Category: " << node->category << " ";
-        }
-        else {
-            cout << node->feature << ": " << node->splitValue << " ";
-        }
-        printTreePreorder(node->leftChild);
-        printTreePreorder(node->rightChild);
+void printTreePreorder(const TreeNode* node) {
+    if (node == nullptr) return;
+    if (node->category != -1) {
+        std::cout << "Category: " << node->category << " ";
+    } else {
+        std::cout << node->feature << ": " << node->splitValue << " ";
     }
+    printTreePreorder(node->leftChild.get());
+    printTreePreorder(node->rightChild.get());
 }
 
-int predict(TreeNode* node, Passenger& passenger) {
-    // Base case: If the node has no children, return its category.
-    if (node->leftChild == nullptr && node->rightChild == nullptr) {
+int predict(const TreeNode* node, const Passenger& passenger) {
+    if (node == nullptr) {
+        return -1;
+    }
+    if (!node->leftChild && !node->rightChild) {
         return node->category;
     }
 
-    // Recursive case: Check the feature and decide the next node based on the feature's value.
     if (node->feature == "Sex") {
         if (passenger.sex <= node->splitValue) {
-            return predict(node->leftChild, passenger);
+            return predict(node->leftChild.get(), passenger);
+        } else {
+            return predict(node->rightChild.get(), passenger);
         }
-        else {
-            return predict(node->rightChild, passenger);
+    } else if (node->feature == "Pclass") {
+        if (passenger.pclass == static_cast<int>(node->splitValue)) {
+            return predict(node->leftChild.get(), passenger);
+        } else {
+            return predict(node->rightChild.get(), passenger);
         }
-    }
-    else if (node->feature == "Pclass") {
-        if (passenger.pclass == int(node->splitValue)) {
-            return predict(node->leftChild, passenger);
-        }
-        else {
-            return predict(node->rightChild, passenger);
-        }
-    }
-    else if (node->feature == "Age") {
+    } else if (node->feature == "Age") {
         if (passenger.age <= node->splitValue) {
-            return predict(node->leftChild, passenger);
+            return predict(node->leftChild.get(), passenger);
+        } else {
+            return predict(node->rightChild.get(), passenger);
         }
-        else {
-            return predict(node->rightChild, passenger);
-        }
-    }
-    else {
-        return -1;  // Return an invalid category or handle error appropriately
+    } else {
+        return -1;
     }
 }
 
+double calculateAccuracy(const std::vector<Passenger>& passengers, const TreeNode* root) {
+    if (root == nullptr || passengers.empty()) {
+        return 0.0;
+    }
 
-
-double calculateAccuracy(vector<Passenger>& passengers, TreeNode* root) {
     double correctPredictions = 0;
-    for (int i = 0; i < passengers.size(); ++i) {
-        int predicted = predict(root, passengers[i]);
-        if (predicted == passengers[i].survived) {
+    for (const auto& passenger : passengers) {
+        int predicted = predict(root, passenger);
+        if (predicted == passenger.survived) {
             correctPredictions++;
         }
     }
-    double Accuracy = correctPredictions / passengers.size() * 100.0;
 
-    return Accuracy;  // Convert to percentage
+    return (correctPredictions / passengers.size()) * 100.0;
 }

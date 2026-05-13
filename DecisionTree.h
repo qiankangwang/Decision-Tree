@@ -1,9 +1,11 @@
 #ifndef DECISIONTREE_H
 #define DECISIONTREE_H
+
 #include <iostream>
 #include <vector>
 #include <set>
-using namespace std;
+#include <string>
+#include <memory>
 
 struct Passenger {
     int survived;
@@ -17,32 +19,31 @@ struct Passenger {
 };
 
 struct TreeNode {
-    string feature;
+    std::string feature;
     double splitValue;
     int category;
-    TreeNode* leftChild;
-    TreeNode* rightChild;
+    std::unique_ptr<TreeNode> leftChild;
+    std::unique_ptr<TreeNode> rightChild;
 
-    TreeNode(string f, double split, int cat = -1)
-        : feature(f), splitValue(split), category(cat), leftChild(nullptr), rightChild(nullptr) {}
+    TreeNode(std::string f, double split, int cat = -1)
+        : feature(std::move(f)), splitValue(split), category(cat) {}
 
-    TreeNode(int cat)
-        : category(cat), leftChild(nullptr), rightChild(nullptr) {}
+    explicit TreeNode(int cat)
+        : category(cat) {}
 };
 
-vector<Passenger> readPassengers(string& filename);
-void printPassengers(vector<Passenger>& passengers);
+std::vector<Passenger> readPassengers(const std::string& filename);
+void printPassengers(const std::vector<Passenger>& passengers);
 
-void selectionSort(vector<Passenger>& passengers);
-double findBestSplit(vector<Passenger>& passengers);
-double calculateGiniAtSplit(vector<Passenger>& passengers, double splitAge);
-double calculateGiniForSex(vector<Passenger>& passengers);
-double calculateGiniForPclass(vector<Passenger>& passengers);
-double findBestSplitForPclass(vector<Passenger>& passengers);
+void selectionSort(std::vector<Passenger>& passengers);
+double findBestSplit(std::vector<Passenger>& passengers);
+double calculateGiniAtSplit(std::vector<Passenger>& passengers, double splitAge);
+double calculateGiniForSex(std::vector<Passenger>& passengers);
+double calculateGiniForPclass(std::vector<Passenger>& passengers);
+double findBestSplitForPclass(std::vector<Passenger>& passengers);
 
-
-TreeNode* buildDecisionTree(vector<Passenger>& passengers, int depth, set<string>& usedFeatures);
-void printTreePreorder(TreeNode* node);
-double calculateAccuracy(vector<Passenger>& passengers, TreeNode* root);
+std::unique_ptr<TreeNode> buildDecisionTree(std::vector<Passenger>& passengers, int depth, std::set<std::string>& usedFeatures);
+void printTreePreorder(const TreeNode* node);
+double calculateAccuracy(const std::vector<Passenger>& passengers, const TreeNode* root);
 
 #endif

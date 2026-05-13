@@ -2,36 +2,47 @@
 #include <fstream>
 #include <sstream>
 
-vector<Passenger> readPassengers(string& filename) {
-    vector<Passenger> passengers;
-    ifstream file(filename);
-    string line;
-    if (file.is_open()) {
-        while (getline(file, line)) {
-            std::istringstream iss(line);
-            Passenger passenger;
-            iss >> passenger.survived >> passenger.pclass >> passenger.sex
-                >> passenger.age >> passenger.sibsp >> passenger.parch
-                >> passenger.fare >> passenger.embarked;
-            passengers.push_back(passenger);
+std::vector<Passenger> readPassengers(const std::string& filename) {
+    std::vector<Passenger> passengers;
+    std::ifstream file(filename);
+    std::string line;
+
+    if (!file.is_open()) {
+        std::cerr << "Error: Unable to open file: " << filename << std::endl;
+        std::cerr << "Usage: ./decision_tree <data_file.txt>" << std::endl;
+        return passengers;
+    }
+
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        Passenger passenger;
+        iss >> passenger.survived >> passenger.pclass >> passenger.sex
+            >> passenger.age >> passenger.sibsp >> passenger.parch
+            >> passenger.fare >> passenger.embarked;
+
+        if (iss.fail()) {
+            std::cerr << "Warning: Failed to parse line: " << line << std::endl;
+            continue;
         }
-        file.close();
+
+        passengers.push_back(passenger);
     }
-    else {
-        cerr << "Unable to open file: " << filename << endl;
-    }
+
+    file.close();
+    std::cout << "Loaded " << passengers.size() << " passengers from " << filename << std::endl;
+
     return passengers;
 }
 
-void printPassengers(vector<Passenger>& passengers) {
-    for (int i = 0; i < passengers.size(); ++i) {
-        cout << "Survived: " << passengers[i].survived
-            << ", Class: " << passengers[i].pclass
-            << ", Sex: " << passengers[i].sex
-            << ", Age: " << passengers[i].age
-            << ", Siblings/Spouses: " << passengers[i].sibsp
-            << ", Parents/Children: " << passengers[i].parch
-            << ", Fare: " << passengers[i].fare
-            << ", Embarked: " << passengers[i].embarked << endl;
+void printPassengers(const std::vector<Passenger>& passengers) {
+    for (const auto& p : passengers) {
+        std::cout << "Survived: " << p.survived
+                  << ", Class: " << p.pclass
+                  << ", Sex: " << p.sex
+                  << ", Age: " << p.age
+                  << ", Siblings/Spouses: " << p.sibsp
+                  << ", Parents/Children: " << p.parch
+                  << ", Fare: " << p.fare
+                  << ", Embarked: " << p.embarked << std::endl;
     }
 }
