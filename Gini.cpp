@@ -1,18 +1,17 @@
-﻿#include "DecisionTree.h"
+#include "DecisionTree.h"
 
-double calculateGiniForSex(vector<Passenger>& passengers) {
+double calculateGiniForSex(std::vector<Passenger>& passengers) {
     double countFemale = 0, countMale = 0;
     double survivedFemale = 0, survivedMale = 0;
 
-    for (int i = 0; i < passengers.size(); ++i) {
-        if (passengers[i].sex == 1) {  // Assuming 1 represents females
+    for (const auto& p : passengers) {
+        if (p.sex == 1) {
             countFemale++;
-            if (passengers[i].survived) 
+            if (p.survived)
                 survivedFemale++;
-        }
-        else {
+        } else {
             countMale++;
-            if (passengers[i].survived) 
+            if (p.survived)
                 survivedMale++;
         }
     }
@@ -32,22 +31,22 @@ double calculateGiniForSex(vector<Passenger>& passengers) {
     double total = countFemale + countMale;
     double totalGini = 0.0;
 
-    if (total > 0) { 
+    if (total > 0) {
         totalGini = countFemale / total * giniFemale + countMale / total * giniMale;
     }
 
     return totalGini;
 }
 
-double calculateGiniForPclass(vector<Passenger>& passengers) {
-    double count[3] = { 0, 0, 0 }; // Array to count the number of passengers in each category
-    double survivedCount[3] = { 0, 0, 0 }; // Number of survivors in each category
+double calculateGiniForPclass(std::vector<Passenger>& passengers) {
+    double count[3] = { 0, 0, 0 };
+    double survivedCount[3] = { 0, 0, 0 };
 
-    for (int i = 0; i < passengers.size(); ++i) {
-        if (passengers[i].pclass >= 1 && passengers[i].pclass <= 3) {
-            int index = passengers[i].pclass - 1;
+    for (const auto& p : passengers) {
+        if (p.pclass >= 1 && p.pclass <= 3) {
+            int index = p.pclass - 1;
             count[index]++;
-            if (passengers[i].survived) {
+            if (p.survived) {
                 survivedCount[index]++;
             }
         }
@@ -67,15 +66,15 @@ double calculateGiniForPclass(vector<Passenger>& passengers) {
     return totalGini;
 }
 
-double findBestSplitForPclass(vector<Passenger>& passengers) {
+double findBestSplitForPclass(std::vector<Passenger>& passengers) {
     int counts[3] = { 0, 0, 0 };
-    int survivedCounts[3] = { 0, 0, 0 }; 
+    int survivedCounts[3] = { 0, 0, 0 };
 
-    for (int i = 0; i < passengers.size(); ++i) {
-        if (passengers[i].pclass >= 1 && passengers[i].pclass <= 3) {
-            int index = passengers[i].pclass - 1;
+    for (const auto& p : passengers) {
+        if (p.pclass >= 1 && p.pclass <= 3) {
+            int index = p.pclass - 1;
             counts[index]++;
-            if (passengers[i].survived) {
+            if (p.survived) {
                 survivedCounts[index]++;
             }
         }
@@ -100,18 +99,16 @@ double findBestSplitForPclass(vector<Passenger>& passengers) {
     return bestSplit;
 }
 
-void selectionSort(vector<Passenger>& passengers) {
-    for (int i = 0; i < passengers.size() - 1; i++) {
-        int minIndex = i;
-        for (int j = i + 1; j < passengers.size(); j++) {
+void selectionSort(std::vector<Passenger>& passengers) {
+    for (size_t i = 0; i < passengers.size() - 1; i++) {
+        size_t minIndex = i;
+        for (size_t j = i + 1; j < passengers.size(); j++) {
             if (passengers[j].age < passengers[minIndex].age) {
                 minIndex = j;
             }
         }
         if (minIndex != i) {
-            Passenger temp = passengers[i];
-            passengers[i] = passengers[minIndex];
-            passengers[minIndex] = temp;
+            std::swap(passengers[i], passengers[minIndex]);
         }
     }
 }
@@ -122,9 +119,7 @@ double calculateGini(int counts[2], double total) {
     }
 
     double sum = 0;
-
-    // We are assuming counts is an array with two elements
-    for (int i = 0; i < 2; ++i) {  // Since we know there are only two categories
+    for (int i = 0; i < 2; ++i) {
         double probability = counts[i] / total;
         sum += probability * probability;
     }
@@ -132,33 +127,32 @@ double calculateGini(int counts[2], double total) {
     return 1 - sum;
 }
 
-
-double findBestSplit(vector<Passenger>& passengers) {
-    vector<Passenger> sortedPassengers = passengers;
+double findBestSplit(std::vector<Passenger>& passengers) {
+    std::vector<Passenger> sortedPassengers = passengers;
     selectionSort(sortedPassengers);
 
     double bestGini = 1.0;
     double bestSplit = -1.0;
-    int total = sortedPassengers.size();
+    size_t total = sortedPassengers.size();
 
-    for (int i = 1; i < total; i++) {
+    for (size_t i = 1; i < total; i++) {
         if (sortedPassengers[i].age != sortedPassengers[i - 1].age) {
             double currentSplit = (sortedPassengers[i].age + sortedPassengers[i - 1].age) / 2.0;
 
-            int leftCounts[2] = { 0, 0 };  // [0] for not survived, [1] for survived
-            int rightCounts[2] = { 0, 0 }; // [0] for not survived, [1] for survived
+            int leftCounts[2] = { 0, 0 };
+            int rightCounts[2] = { 0, 0 };
 
-            for (int j = 0; j < i; j++) {
+            for (size_t j = 0; j < i; j++) {
                 leftCounts[sortedPassengers[j].survived]++;
             }
-            for (int j = i; j < total; j++) {
+            for (size_t j = i; j < total; j++) {
                 rightCounts[sortedPassengers[j].survived]++;
             }
 
-            double leftGini = calculateGini(leftCounts, i);
-            double rightGini = calculateGini(rightCounts, total - i);
+            double leftGini = calculateGini(leftCounts, static_cast<double>(i));
+            double rightGini = calculateGini(rightCounts, static_cast<double>(total - i));
 
-            double weightedGini = (i * leftGini + (total - i) * rightGini) / total;
+            double weightedGini = (static_cast<double>(i) * leftGini + static_cast<double>(total - i) * rightGini) / static_cast<double>(total);
             if (weightedGini < bestGini) {
                 bestGini = weightedGini;
                 bestSplit = currentSplit;
@@ -169,28 +163,25 @@ double findBestSplit(vector<Passenger>& passengers) {
     return bestSplit;
 }
 
-double calculateGiniAtSplit(vector<Passenger>& passengers, double splitAge) {
+double calculateGiniAtSplit(std::vector<Passenger>& passengers, double splitAge) {
     int leftCounts[2] = { 0, 0 };
     int rightCounts[2] = { 0, 0 };
 
     int leftTotal = 0, rightTotal = 0;
 
-    for (int i = 0; i < passengers.size(); i++) {
-        if (passengers[i].age <= splitAge) {
-            leftCounts[passengers[i].survived]++;
+    for (const auto& p : passengers) {
+        if (p.age <= splitAge) {
+            leftCounts[p.survived]++;
             leftTotal++;
-        }
-        else {
-            rightCounts[passengers[i].survived]++;
+        } else {
+            rightCounts[p.survived]++;
             rightTotal++;
         }
     }
 
-    // Calculate Gini for each side
     double leftGini = calculateGini(leftCounts, leftTotal);
     double rightGini = calculateGini(rightCounts, rightTotal);
 
-    // Calculate weighted Gini
     double total = leftTotal + rightTotal;
     double totalGini = (leftTotal * leftGini + rightTotal * rightGini) / total;
 

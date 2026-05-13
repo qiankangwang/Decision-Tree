@@ -1,35 +1,38 @@
 #include "DecisionTree.h"
 
-int main() {
-    string filename = "F:\processed_train_simple.txt";
-    vector<Passenger> passengers = readPassengers(filename);
+int main(int argc, char* argv[]) {
+    std::string filename = (argc > 1) ? argv[1] : "processed_train_simple.txt";
+
+    std::vector<Passenger> passengers = readPassengers(filename);
+    if (passengers.empty()) {
+        return 1;
+    }
 
     printPassengers(passengers);
 
     double bestSplit = findBestSplit(passengers);
-    cout << endl << "Gini impurity for Best split Age: " << bestSplit << endl;
+    std::cout << std::endl << "Gini impurity for best split Age: " << bestSplit << std::endl;
 
     double giniImpurity = calculateGiniAtSplit(passengers, bestSplit);
-    cout << "Gini Impurity at age " << bestSplit << " is " << giniImpurity << endl;
+    std::cout << "Gini impurity at age " << bestSplit << " is " << giniImpurity << std::endl;
 
-    // Calculate Gini impurity for sex split
     double giniSex = calculateGiniForSex(passengers);
-    cout << "Gini impurity for sex: " << giniSex << endl;
+    std::cout << "Gini impurity for sex: " << giniSex << std::endl;
 
-    // Calculate Gini impurity for passenger class
     double giniPclass = calculateGiniForPclass(passengers);
-    cout << "Gini impurity for passenger class: " << giniPclass << endl;
+    std::cout << "Gini impurity for passenger class: " << giniPclass << std::endl;
 
     double bestSplitPclass = findBestSplitForPclass(passengers);
-        cout << "Gini impurity for Best split Age: " << bestSplitPclass << endl;
+    std::cout << "Gini impurity for best split Pclass: " << bestSplitPclass << std::endl;
 
-    set<string> usedFeatures;
-    TreeNode* root = buildDecisionTree(passengers, 0, usedFeatures);
-    printTreePreorder(root);
-    cout << endl;
-    double accuracy = calculateAccuracy(passengers, root);
-    cout << "Accuracy of the decision tree: " << accuracy << "%" << endl;
+    std::set<std::string> usedFeatures;
+    auto root = buildDecisionTree(passengers, 0, usedFeatures);
 
+    printTreePreorder(root.get());
+    std::cout << std::endl;
+
+    double accuracy = calculateAccuracy(passengers, root.get());
+    std::cout << "Accuracy of the decision tree: " << accuracy << "%" << std::endl;
 
     return 0;
 }
