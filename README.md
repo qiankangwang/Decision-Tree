@@ -103,4 +103,4 @@ The C++ program also exports its own (shallower) tree to `tree_cpp.json` on each
 
 ## Project Materials
 
-- [Project Report & Slides (PDF)](./Decison%20%20tree%20tree%20structure%20in%20machine%20lerning.pdf)
+- [Project Report & Slides (PDF)](./decision-tree-report.pdf)
