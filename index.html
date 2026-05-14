@@ -65,7 +65,7 @@
             fill: #111827;
             stroke: #60a5fa;
             stroke-width: 2px;
-            transition: all 0.3s ease;
+            transition: stroke 0.3s ease, stroke-width 0.3s ease, fill 0.3s ease;
             cursor: pointer;
         }
         .node circle.leaf-survived {
@@ -75,6 +75,9 @@
         .node circle.leaf-perished {
             stroke: #f87171;
             fill: #7f1d1d;
+        }
+        .node circle.collapsed {
+            fill: #1e3a5f;
         }
         .node circle:hover {
             stroke-width: 3px;
@@ -100,7 +103,7 @@
             fill: none;
             stroke: #374151;
             stroke-width: 1.5px;
-            transition: all 0.4s ease;
+            transition: stroke 0.4s ease, stroke-width 0.4s ease;
         }
         .link.highlighted {
             stroke: #fbbf24;
@@ -251,22 +254,35 @@
             border-radius: 50%;
             border: 2px solid;
         }
+
+        #loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #64748b;
+            z-index: 50;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div>
             <h1>Titanic Decision Tree — Interactive Demo</h1>
-            <div class="subtitle">Tree trained by your C++ algorithm on 712 Kaggle Titanic passengers (77.9% accuracy). Click nodes to expand/collapse, or predict survival interactively.</div>
+            <div class="subtitle">Decision tree trained on 714 Kaggle Titanic passengers (82.9% accuracy, depth 5, 17 leaves). Click nodes to expand/collapse, or predict survival interactively.</div>
         </div>
         <div class="controls">
             <button class="btn" onclick="expandAll()">Expand All</button>
             <button class="btn" onclick="collapseAll()">Collapse All</button>
+            <button class="btn" onclick="fitToScreen(true)">Fit to Screen</button>
             <button class="btn" id="quizBtn" onclick="toggleQuiz()">Predict Survival</button>
         </div>
     </div>
 
     <div id="tree-container"></div>
+    <div id="loading">Loading decision tree…</div>
 
     <div class="quiz-panel" id="quizPanel">
         <h2>Predict Survival</h2>
@@ -292,81 +308,179 @@
 
     <script>
         // ========== Titanic Decision Tree Data ==========
-        // Based on the classic "Women and children first" split pattern
+        // Trained with scikit-learn on the Kaggle Titanic dataset (714 passengers
+        // with complete pclass/sex/age/fare). max_depth=5, min_samples_leaf=20.
+        // Regenerate with: python scripts/generate_tree.py
         const treeData = {
   "name": "Would this passenger\nsurvive the Titanic?",
-  "type": "root",
+  "desc": "Root split on Sex. Samples: 714, Survived: 290, Perished: 424",
+  "samples": 714, "survived": 290, "perished": 424,
+  "type": "root", "edgeLabel": "Start",
   "children": [
     {
-      "edgeLabel": "Start",
-      "name": "Sex = female?",
+      "name": "Age <= 6.5?",
+      "desc": "Split on Age. Samples: 453, Survived: 93, Perished: 360",
+      "samples": 453, "survived": 93, "perished": 360, "edgeLabel": "Male",
       "children": [
+        { "name": "Survived", "type": "survived", "desc": "16 survived, 8 perished (n=24)", "samples": 24, "survived": 16, "perished": 8, "edgeLabel": "Age <= 6.5" },
         {
-          "edgeLabel": "No (Male)",
-          "name": "Class = 1?",
+          "name": "Class <= 1?",
+          "desc": "Split on Passenger Class. Samples: 429, Survived: 77, Perished: 352",
+          "samples": 429, "survived": 77, "perished": 352, "edgeLabel": "Age > 6.5",
           "children": [
             {
-              "edgeLabel": "Class = 1",
-              "name": "Perished",
-              "type": "perished"
+              "name": "Age <= 53.0?",
+              "desc": "Split on Age. Samples: 99, Survived: 38, Perished: 61",
+              "samples": 99, "survived": 38, "perished": 61, "edgeLabel": "Class <= 1",
+              "children": [
+                {
+                  "name": "Fare <= 32.51?",
+                  "desc": "Split on Fare. Samples: 77, Survived: 35, Perished: 42",
+                  "samples": 77, "survived": 35, "perished": 42, "edgeLabel": "Age <= 53.0",
+                  "children": [
+                    { "name": "Survived", "type": "survived", "desc": "15 survived, 11 perished (n=26)", "samples": 26, "survived": 15, "perished": 11, "edgeLabel": "Fare <= 32.51" },
+                    { "name": "Perished", "type": "perished", "desc": "20 survived, 31 perished (n=51)", "samples": 51, "survived": 20, "perished": 31, "edgeLabel": "Fare > 32.51" }
+                  ]
+                },
+                { "name": "Perished", "type": "perished", "desc": "3 survived, 19 perished (n=22)", "samples": 22, "survived": 3, "perished": 19, "edgeLabel": "Age > 53.0" }
+              ]
             },
             {
-              "edgeLabel": "Class != 1",
-              "name": "Perished",
-              "type": "perished"
+              "name": "Age <= 32.2?",
+              "desc": "Split on Age. Samples: 330, Survived: 39, Perished: 291",
+              "samples": 330, "survived": 39, "perished": 291, "edgeLabel": "Class > 1",
+              "children": [
+                {
+                  "name": "Age <= 30.8?",
+                  "desc": "Split on Age. Samples: 225, Survived: 33, Perished: 192",
+                  "samples": 225, "survived": 33, "perished": 192, "edgeLabel": "Age <= 32.2",
+                  "children": [
+                    { "name": "Perished", "type": "perished", "desc": "25 survived, 179 perished (n=204)", "samples": 204, "survived": 25, "perished": 179, "edgeLabel": "Age <= 30.8" },
+                    { "name": "Perished", "type": "perished", "desc": "8 survived, 13 perished (n=21)", "samples": 21, "survived": 8, "perished": 13, "edgeLabel": "Age > 30.8" }
+                  ]
+                },
+                {
+                  "name": "Fare <= 7.91?",
+                  "desc": "Split on Fare. Samples: 105, Survived: 6, Perished: 99",
+                  "samples": 105, "survived": 6, "perished": 99, "edgeLabel": "Age > 32.2",
+                  "children": [
+                    { "name": "Perished", "type": "perished", "desc": "0 survived, 32 perished (n=32)", "samples": 32, "survived": 0, "perished": 32, "edgeLabel": "Fare <= 7.91" },
+                    { "name": "Perished", "type": "perished", "desc": "6 survived, 67 perished (n=73)", "samples": 73, "survived": 6, "perished": 67, "edgeLabel": "Fare > 7.91" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Class <= 2?",
+      "desc": "Split on Passenger Class. Samples: 261, Survived: 197, Perished: 64",
+      "samples": 261, "survived": 197, "perished": 64, "edgeLabel": "Female",
+      "children": [
+        {
+          "name": "Fare <= 28.86?",
+          "desc": "Split on Fare. Samples: 159, Survived: 150, Perished: 9",
+          "samples": 159, "survived": 150, "perished": 9, "edgeLabel": "Class <= 2",
+          "children": [
+            {
+              "name": "Age <= 37.0?",
+              "desc": "Split on Age. Samples: 69, Survived: 62, Perished: 7",
+              "samples": 69, "survived": 62, "perished": 7, "edgeLabel": "Fare <= 28.86",
+              "children": [
+                {
+                  "name": "Age <= 27.5?",
+                  "desc": "Split on Age. Samples: 49, Survived: 46, Perished: 3",
+                  "samples": 49, "survived": 46, "perished": 3, "edgeLabel": "Age <= 37.0",
+                  "children": [
+                    { "name": "Survived", "type": "survived", "desc": "23 survived, 3 perished (n=26)", "samples": 26, "survived": 23, "perished": 3, "edgeLabel": "Age <= 27.5" },
+                    { "name": "Survived", "type": "survived", "desc": "23 survived, 0 perished (n=23)", "samples": 23, "survived": 23, "perished": 0, "edgeLabel": "Age > 27.5" }
+                  ]
+                },
+                { "name": "Survived", "type": "survived", "desc": "16 survived, 4 perished (n=20)", "samples": 20, "survived": 16, "perished": 4, "edgeLabel": "Age > 37.0" }
+              ]
+            },
+            {
+              "name": "Fare <= 141.08?",
+              "desc": "Split on Fare. Samples: 90, Survived: 88, Perished: 2",
+              "samples": 90, "survived": 88, "perished": 2, "edgeLabel": "Fare > 28.86",
+              "children": [
+                { "name": "Survived", "type": "survived", "desc": "70 survived, 0 perished (n=70)", "samples": 70, "survived": 70, "perished": 0, "edgeLabel": "Fare <= 141.08" },
+                { "name": "Survived", "type": "survived", "desc": "18 survived, 2 perished (n=20)", "samples": 20, "survived": 18, "perished": 2, "edgeLabel": "Fare > 141.08" }
+              ]
             }
           ]
         },
         {
-          "edgeLabel": "Yes (Female)",
-          "name": "Survived",
-          "type": "survived"
+          "name": "Fare <= 20.80?",
+          "desc": "Split on Fare. Samples: 102, Survived: 47, Perished: 55",
+          "samples": 102, "survived": 47, "perished": 55, "edgeLabel": "Class > 2",
+          "children": [
+            {
+              "name": "Age <= 16.5?",
+              "desc": "Split on Age. Samples: 79, Survived: 44, Perished: 35",
+              "samples": 79, "survived": 44, "perished": 35, "edgeLabel": "Fare <= 20.80",
+              "children": [
+                { "name": "Survived", "type": "survived", "desc": "16 survived, 4 perished (n=20)", "samples": 20, "survived": 16, "perished": 4, "edgeLabel": "Age <= 16.5" },
+                {
+                  "name": "Age <= 27.5?",
+                  "desc": "Split on Age. Samples: 59, Survived: 28, Perished: 31",
+                  "samples": 59, "survived": 28, "perished": 31, "edgeLabel": "Age > 16.5",
+                  "children": [
+                    { "name": "Survived", "type": "survived", "desc": "20 survived, 17 perished (n=37)", "samples": 37, "survived": 20, "perished": 17, "edgeLabel": "Age <= 27.5" },
+                    { "name": "Perished", "type": "perished", "desc": "8 survived, 14 perished (n=22)", "samples": 22, "survived": 8, "perished": 14, "edgeLabel": "Age > 27.5" }
+                  ]
+                }
+              ]
+            },
+            { "name": "Perished", "type": "perished", "desc": "3 survived, 20 perished (n=23)", "samples": 23, "survived": 3, "perished": 20, "edgeLabel": "Fare > 20.80" }
+          ]
         }
       ]
     }
   ]
-}
-;
+};
 
         // ========== D3 Tree Rendering ==========
-        const container = document.getElementById('tree-container');
-        let width = container.clientWidth;
-        let height = container.clientHeight;
-
-        const svg = d3.select("#tree-container").append("svg")
-            .attr("width", "100%")
-            .attr("height", "100%")
-            .attr("viewBox", [-width/2, -80, width, height]);
-
-        const g = svg.append("g");
-
-        const zoom = d3.zoom()
-            .scaleExtent([0.3, 3])
-            .on("zoom", (e) => g.attr("transform", e.transform));
-        svg.call(zoom);
-
-        let i = 0;
+        // Everything runs after window load so the container has real dimensions
+        // (reading clientWidth too early yields 0 and a zero-size viewBox).
+        let container, svg, g, zoom, root, tree;
+        let nodeIdCounter = 0;
         const duration = 400;
-        let root;
 
-        const tree = d3.tree().nodeSize([55, 190]);
+        function initTree() {
+            container = document.getElementById('tree-container');
 
-        root = d3.hierarchy(treeData, d => d.children);
-        root.x0 = 0;
-        root.y0 = 0;
+            if (typeof d3 === 'undefined') {
+                document.getElementById('loading').textContent =
+                    'Failed to load D3.js. Check your network connection and refresh.';
+                return;
+            }
 
-        if (root.children) {
-            root.children.forEach(collapse);
+            svg = d3.select('#tree-container').append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%');
+
+            g = svg.append('g');
+
+            zoom = d3.zoom()
+                .scaleExtent([0.2, 2.5])
+                .on('zoom', (e) => g.attr('transform', e.transform));
+            svg.call(zoom);
+
+            tree = d3.tree().nodeSize([62, 200]);
+
+            root = d3.hierarchy(treeData, d => d.children);
+            root.x0 = 0;
+            root.y0 = 0;
+
+            update(root);
+            document.getElementById('loading').style.display = 'none';
+
+            // Fit once layout has settled
+            setTimeout(() => fitToScreen(true), 100);
         }
-
-        update(root);
-
-        setTimeout(() => {
-            svg.transition().duration(750).call(
-                zoom.transform,
-                d3.zoomIdentity.translate(width/2, 110).scale(0.82)
-            );
-        }, 100);
 
         function collapse(d) {
             if (d.children) {
@@ -384,24 +498,32 @@
             if (d.children) d.children.forEach(expand);
         }
 
+        function diagonal(s, d) {
+            return `M ${s.x} ${s.y}
+                    C ${s.x} ${(s.y + d.y) / 2},
+                      ${d.x} ${(s.y + d.y) / 2},
+                      ${d.x} ${d.y}`;
+        }
+
         function update(source) {
-            const treeData = tree(root);
-            const nodes = treeData.descendants();
-            const links = treeData.links();
+            const layout = tree(root);
+            const nodes = layout.descendants();
+            const links = layout.links();
 
-            nodes.forEach(d => d.y = d.depth * 185);
+            nodes.forEach(d => d.y = d.depth * 200);
 
+            // ----- Nodes -----
             const node = g.selectAll('g.node')
-                .data(nodes, d => d.id || (d.id = ++i));
+                .data(nodes, d => d.id || (d.id = ++nodeIdCounter));
 
             const nodeEnter = node.enter().append('g')
                 .attr('class', 'node')
-                .attr("transform", d => `translate(${source.x0},${source.y0})`)
+                .attr('transform', () => `translate(${source.x0},${source.y0})`)
                 .on('click', (e, d) => {
                     if (d.children) {
                         d._children = d.children;
                         d.children = null;
-                    } else {
+                    } else if (d._children) {
                         d.children = d._children;
                         d._children = null;
                     }
@@ -410,30 +532,29 @@
                 .on('mouseover', function(e, d) {
                     const tooltip = document.getElementById('tooltip');
                     if (d.data.desc) {
-                        tooltip.innerHTML = d.data.desc;
+                        tooltip.textContent = d.data.desc;
                         tooltip.style.opacity = 1;
-                        tooltip.style.left = (e.pageX + 12) + 'px';
-                        tooltip.style.top = (e.pageY - 12) + 'px';
+                        tooltip.style.left = (e.pageX + 14) + 'px';
+                        tooltip.style.top = (e.pageY - 10) + 'px';
                     }
+                })
+                .on('mousemove', function(e) {
+                    const tooltip = document.getElementById('tooltip');
+                    tooltip.style.left = (e.pageX + 14) + 'px';
+                    tooltip.style.top = (e.pageY - 10) + 'px';
                 })
                 .on('mouseout', () => {
                     document.getElementById('tooltip').style.opacity = 0;
                 });
 
             nodeEnter.append('circle')
-                .attr('r', 1e-6)
-                .attr('class', d => {
-                    if (d.data.type === 'survived') return 'leaf-survived';
-                    if (d.data.type === 'perished') return 'leaf-perished';
-                    return '';
-                });
+                .attr('r', 1e-6);
 
             nodeEnter.append('text')
-                .attr("dy", d => d.data.type ? 36 : -16)
-                .style("fill-opacity", 1e-6)
+                .attr('dy', d => isLeaf(d) ? 38 : -20)
                 .each(function(d) {
                     const el = d3.select(this);
-                    const lines = d.data.name.split('\n');
+                    const lines = String(d.data.name).split('\n');
                     lines.forEach((line, idx) => {
                         el.append('tspan')
                             .attr('x', 0)
@@ -442,30 +563,35 @@
                     });
                 });
 
-            const nodeUpdate = node.merge(nodeEnter).transition().duration(duration)
-                .attr("transform", d => `translate(${d.x},${d.y})`);
+            const nodeUpdate = node.merge(nodeEnter);
+
+            nodeUpdate.transition().duration(duration)
+                .attr('transform', d => `translate(${d.x},${d.y})`);
 
             nodeUpdate.select('circle')
-                .attr('r', d => d.data.type ? 22 : 14)
-                .attr('cursor', 'pointer');
-
-            nodeUpdate.select('text')
-                .style("fill-opacity", 1);
+                .attr('r', d => isLeaf(d) ? 22 : 15)
+                .attr('class', d => {
+                    let cls = '';
+                    if (d.data.type === 'survived') cls = 'leaf-survived';
+                    else if (d.data.type === 'perished') cls = 'leaf-perished';
+                    if (d._children) cls += ' collapsed';
+                    return cls.trim();
+                });
 
             const nodeExit = node.exit().transition().duration(duration)
-                .attr("transform", d => `translate(${source.x},${source.y})`)
+                .attr('transform', () => `translate(${source.x},${source.y})`)
                 .remove();
-
             nodeExit.select('circle').attr('r', 1e-6);
-            nodeExit.select('text').style("fill-opacity", 1e-6);
+            nodeExit.select('text').style('fill-opacity', 1e-6);
 
+            // ----- Links -----
             const link = g.selectAll('path.link')
                 .data(links, d => d.target.id);
 
-            const linkEnter = link.enter().insert('path', "g")
-                .attr("class", "link")
-                .attr('d', d => {
-                    const o = {x: source.x0, y: source.y0};
+            const linkEnter = link.enter().insert('path', 'g')
+                .attr('class', 'link')
+                .attr('d', () => {
+                    const o = { x: source.x0, y: source.y0 };
                     return diagonal(o, o);
                 });
 
@@ -473,12 +599,13 @@
                 .attr('d', d => diagonal(d.source, d.target));
 
             link.exit().transition().duration(duration)
-                .attr('d', d => {
-                    const o = {x: source.x, y: source.y};
+                .attr('d', () => {
+                    const o = { x: source.x, y: source.y };
                     return diagonal(o, o);
                 })
                 .remove();
 
+            // ----- Edge labels -----
             const linkLabel = g.selectAll('g.link-label-group')
                 .data(links, d => d.target.id);
 
@@ -492,19 +619,22 @@
 
             labelEnter.append('text')
                 .attr('class', 'link-label')
+                .attr('dy', '0.32em')
                 .text(d => d.target.data.edgeLabel || '');
 
-            const labelUpdate = linkLabel.merge(labelEnter).transition().duration(duration)
-                .attr('opacity', 1)
-                .attr('transform', d => `translate(${(d.source.x + d.target.x)/2}, ${(d.source.y + d.target.y)/2})`);
+            const labelUpdate = linkLabel.merge(labelEnter);
 
-            labelUpdate.each(function(d) {
+            labelUpdate.transition().duration(duration)
+                .attr('opacity', 1)
+                .attr('transform', d => `translate(${(d.source.x + d.target.x) / 2}, ${(d.source.y + d.target.y) / 2})`);
+
+            labelUpdate.each(function() {
                 const text = d3.select(this).select('text');
                 const bbox = text.node().getBBox();
                 d3.select(this).select('rect')
-                    .attr('x', bbox.x - 4)
+                    .attr('x', bbox.x - 5)
                     .attr('y', bbox.y - 2)
-                    .attr('width', bbox.width + 8)
+                    .attr('width', bbox.width + 10)
                     .attr('height', bbox.height + 4);
             });
 
@@ -516,23 +646,47 @@
             });
         }
 
-        function diagonal(s, d) {
-            return `M ${s.x} ${s.y}
-                    C ${s.x} ${(s.y + d.y) / 2},
-                      ${d.x} ${(s.y + d.y) / 2},
-                      ${d.x} ${d.y}`;
+        function isLeaf(d) {
+            return !d.children && !d._children;
+        }
+
+        function fitToScreen(animate) {
+            if (!g || !g.node()) return;
+            const bounds = g.node().getBBox();
+            if (!bounds.width || !bounds.height) return;
+
+            const W = container.clientWidth;
+            const H = container.clientHeight;
+            const topPad = 95;
+            const usableH = H - topPad - 30;
+            const pad = 70;
+
+            const scale = Math.min(
+                W / (bounds.width + pad * 2),
+                usableH / (bounds.height + pad * 2),
+                1.2
+            );
+            const tx = W / 2 - (bounds.x + bounds.width / 2) * scale;
+            const ty = topPad + (usableH - bounds.height * scale) / 2 - bounds.y * scale;
+
+            const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
+            if (animate) {
+                svg.transition().duration(600).call(zoom.transform, transform);
+            } else {
+                svg.call(zoom.transform, transform);
+            }
         }
 
         function expandAll() {
             expand(root);
             update(root);
+            setTimeout(() => fitToScreen(true), duration + 50);
         }
 
         function collapseAll() {
-            if (root.children) {
-                root.children.forEach(collapse);
-            }
+            if (root.children) root.children.forEach(collapse);
             update(root);
+            setTimeout(() => fitToScreen(true), duration + 50);
         }
 
         // ========== Quiz Interaction ==========
@@ -545,8 +699,9 @@
             document.getElementById('quizPanel').classList.toggle('open', quizOpen);
             document.getElementById('quizBtn').classList.toggle('active', quizOpen);
             if (quizOpen) {
-                resetHighlight();
                 startQuiz();
+            } else {
+                resetHighlight();
             }
         }
 
@@ -562,29 +717,32 @@
             const optsEl = document.getElementById('quizOptions');
             const restart = document.getElementById('restartArea');
 
-            if (!currentQuizNode.children && !currentQuizNode._children) {
+            const isLeafNode = !currentQuizNode.children && !currentQuizNode._children;
+
+            if (isLeafNode) {
                 const survived = currentQuizNode.data.type === 'survived';
                 qEl.innerHTML = '';
-                let resultHtml = `<div class="result-box ${survived ? 'survived' : 'perished'}">`;
-                resultHtml += `<div class="result-icon">${survived ? '🛟' : '⚰️'}</div>`;
-                resultHtml += `<div class="result-text">${currentQuizNode.data.name.replace(/\n/g, ' ')}</div>`;
+                let html = `<div class="result-box ${survived ? 'survived' : 'perished'}">`;
+                html += `<div class="result-icon">${survived ? '🛟' : '⚰️'}</div>`;
+                html += `<div class="result-text">${survived ? 'Survived' : 'Perished'}</div>`;
                 if (currentQuizNode.data.desc) {
-                    resultHtml += `<div class="result-desc">${currentQuizNode.data.desc}</div>`;
+                    html += `<div class="result-desc">${currentQuizNode.data.desc}</div>`;
                 }
-                resultHtml += '</div>';
+                html += '</div>';
 
-                resultHtml += '<div class="path-summary"><strong>Decision Path:</strong><br>';
+                html += '<div class="path-summary"><strong>Decision Path:</strong><br>';
                 quizPath.forEach((node, idx) => {
-                    if (idx > 0) resultHtml += ' → ';
-                    resultHtml += `<span class="path-tag">${node.data.edgeLabel || 'Start'}</span>`;
+                    if (idx > 0) html += ' → ';
+                    html += `<span class="path-tag">${node.data.edgeLabel || 'Start'}</span>`;
                 });
-                resultHtml += '</div>';
+                html += '</div>';
 
-                optsEl.innerHTML = resultHtml;
+                optsEl.innerHTML = html;
                 restart.style.display = 'block';
                 return;
             }
 
+            // Ensure children are expanded so the path is visible on the tree
             if (currentQuizNode._children) {
                 currentQuizNode.children = currentQuizNode._children;
                 currentQuizNode._children = null;
@@ -592,11 +750,10 @@
             }
 
             restart.style.display = 'none';
-            qEl.textContent = currentQuizNode.data.name.replace(/\n/g, ' ');
+            qEl.textContent = String(currentQuizNode.data.name).replace(/\n/g, ' ');
 
-            const children = currentQuizNode.children;
             optsEl.innerHTML = '';
-            children.forEach(child => {
+            currentQuizNode.children.forEach(child => {
                 const btn = document.createElement('button');
                 btn.className = 'quiz-option';
                 btn.textContent = child.data.edgeLabel || 'Choose';
@@ -612,16 +769,11 @@
 
         function highlightPath(pathNodes) {
             resetHighlight();
-
             const pathIds = new Set(pathNodes.map(d => d.id));
-            const linkTargets = new Set();
-            for (let i = 1; i < pathNodes.length; i++) {
-                linkTargets.add(pathNodes[i].id);
-            }
+            const linkTargets = new Set(pathNodes.slice(1).map(d => d.id));
 
             d3.selectAll('.node circle')
                 .classed('highlighted', d => pathIds.has(d.id));
-
             d3.selectAll('.link')
                 .classed('highlighted', d => linkTargets.has(d.target.id));
         }
@@ -631,10 +783,10 @@
             d3.selectAll('.link').classed('highlighted', false);
         }
 
+        // ========== Lifecycle ==========
+        window.addEventListener('load', initTree);
         window.addEventListener('resize', () => {
-            width = container.clientWidth;
-            height = container.clientHeight;
-            svg.attr("viewBox", [-width/2, -80, width, height]);
+            if (g) fitToScreen(false);
         });
     </script>
 </body>
