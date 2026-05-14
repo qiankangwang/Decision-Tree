@@ -12,37 +12,85 @@ This project implements a decision tree using the **Gini impurity** criterion fo
 - Gini impurity-based splitting for continuous (**Age**) and categorical (**Sex**, **Pclass**) features
 - Preorder tree traversal for visualization
 - Accuracy evaluation on training data
+- **JSON export** of the trained tree for external visualization
 - **Interactive web visualization** of the trained decision tree
 
 ## Tech Stack
 
 - C++ (standard library)
-- Python + scikit-learn (for visualization data generation)
+- Python + scikit-learn (for data conversion and reference training)
 - D3.js (for the interactive web demo)
 
-## File Structure
+## Project Structure
 
-| File | Description |
-|------|-------------|
-| `DecisionTree.h` | Header with data structures and function declarations |
-| `Model.cpp` | Core algorithm: tree building, splitting, prediction |
-| `Gini.cpp` | Gini impurity calculations |
-| `ReadPassenger.cpp` | Data loading and preprocessing |
-| `main.cpp` | Entry point and evaluation |
-| `index.html` | Interactive D3.js visualization demo |
-| `generate_tree.py` | Python script to train on Kaggle data and export tree JSON |
+```
+.
+├── include/
+│   └── DecisionTree.h          # Data structures and function declarations
+├── src/
+│   ├── main.cpp                # Entry point and evaluation
+│   ├── Model.cpp               # Core algorithm: tree building, splitting, prediction
+│   ├── Gini.cpp                # Gini impurity calculations
+│   ├── ReadPassenger.cpp       # Data loading and preprocessing
+│   └── ExportTree.cpp          # Export trained tree to JSON for the demo
+├── scripts/
+│   ├── convert_kaggle.py       # Convert Kaggle CSV to C++ input format
+│   └── generate_tree.py        # Train with sklearn and export tree JSON
+├── index.html                  # Interactive D3.js visualization demo
+├── Makefile
+└── README.md
+```
 
 ## Live Demo
 
-An interactive visualization of the trained decision tree is automatically deployed via GitHub Actions:
+An interactive visualization is automatically deployed via GitHub Actions:
 
 **https://xiaole5211314.github.io/Decision-Tree/**
 
-The demo lets you:
-- Click nodes to expand / collapse the tree
-- Pan and zoom to explore the full structure
-- Use the **Predict Survival** panel to walk through the tree interactively
-- See real sample counts at every node (trained on 714 passengers from the Kaggle Titanic dataset)
+The demo shows the **actual tree trained by the C++ algorithm** on the Kaggle Titanic dataset. You can click nodes to expand/collapse, pan and zoom, or use the **Predict Survival** panel to walk through the tree interactively.
+
+## Build & Run (C++)
+
+```bash
+make
+./decision_tree processed_train.txt
+```
+
+The program trains on the provided dataset, prints the tree in preorder, reports accuracy, and exports the tree structure to `tree_cpp.json`.
+
+### Training on the Full Kaggle Dataset
+
+1. Download `train.csv` from [Kaggle Titanic](https://www.kaggle.com/competitions/titanic/data)
+2. Convert it to the format expected by the C++ program:
+
+```bash
+python scripts/convert_kaggle.py train.csv processed_train.txt
+```
+
+3. Build and run:
+
+```bash
+make
+./decision_tree processed_train.txt
+```
+
+The C++ tree (trained on 712 passengers) achieves **77.9%** accuracy on the training set.
+
+## Visualization Setup
+
+The `index.html` demo is self-contained and reads the tree structure directly from an embedded JSON object. To regenerate the JSON from the C++ tree after training:
+
+```bash
+# After running ./decision_tree, tree_cpp.json is produced automatically.
+# Then update the demo by replacing the treeData object in index.html.
+```
+
+To train a reference tree with sklearn (for comparison):
+
+```bash
+pip install pandas scikit-learn
+python scripts/generate_tree.py
+```
 
 ## How It Works
 
@@ -50,30 +98,7 @@ The demo lets you:
 2. **Splitting** — Evaluates Gini impurity for candidate features and selects the optimal split.
 3. **Recursion** — Builds left and right subtrees until reaching a pure node, minimum size, or max depth.
 4. **Prediction** — Traverses the tree based on feature values to classify survival outcome.
-
-## Build & Run (C++)
-
-```bash
-g++ -std=c++17 main.cpp Model.cpp Gini.cpp ReadPassenger.cpp -o decision_tree
-./decision_tree
-```
-
-The program trains on `processed_train_simple.txt` and prints the tree structure in preorder along with training accuracy.
-
-## Visualization Setup
-
-To regenerate the demo tree from the full Kaggle dataset:
-
-1. Download `train.csv` from [Kaggle Titanic](https://www.kaggle.com/competitions/titanic/data)
-2. Place it in the repo root and rename to `titanic.csv`
-3. Run the Python script:
-
-```bash
-pip install pandas scikit-learn
-python generate_tree.py
-```
-
-This trains a decision tree with `max_depth=5` and `min_samples_leaf=20`, then exports `tree_data.json` which is embedded into `index.html`.
+5. **Export** — Recursively serializes the tree to JSON for the web demo.
 
 ## Project Materials
 
