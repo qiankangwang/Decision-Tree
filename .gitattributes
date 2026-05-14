@@ -1,0 +1,6 @@
+# GitHub Linguist — this is a C++ project.
+# The self-contained D3 demo page and the PDF report are supporting
+# material; they shouldn't dominate the language breakdown on the repo page.
+index.html      linguist-documentation
+*.pdf           linguist-documentation
+*.json          linguist-generated
