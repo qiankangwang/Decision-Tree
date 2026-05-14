@@ -257,7 +257,7 @@
     <div class="header">
         <div>
             <h1>Titanic Decision Tree — Interactive Demo</h1>
-            <div class="subtitle">Trained on 714 passengers from the Kaggle Titanic dataset (82.9% accuracy). Click nodes to expand/collapse, or predict survival interactively.</div>
+            <div class="subtitle">Tree trained by your C++ algorithm on 712 Kaggle Titanic passengers (77.9% accuracy). Click nodes to expand/collapse, or predict survival interactively.</div>
         </div>
         <div class="controls">
             <button class="btn" onclick="expandAll()">Expand All</button>
@@ -296,318 +296,38 @@
         const treeData = {
   "name": "Would this passenger
 survive the Titanic?",
-  "desc": "Split on Sex. Samples: 714, Survived: 290, Perished: 424",
-  "samples": 714,
-  "survived": 290,
-  "perished": 424,
+  "type": "root",
   "children": [
     {
-      "name": "Age ≤ 6.5?",
-      "desc": "Split on Age. Samples: 453, Survived: 93, Perished: 360",
-      "samples": 453,
-      "survived": 93,
-      "perished": 360,
+      "edgeLabel": "Start",
+      "name": "Sex = female?",
       "children": [
         {
-          "name": "Survived",
-          "type": "survived",
-          "desc": "16 survived, 8 perished (n=24)",
-          "samples": 24,
-          "survived": 16,
-          "perished": 8,
-          "edgeLabel": "Age ≤ 6.5"
-        },
-        {
-          "name": "Class ≤ 1?",
-          "desc": "Split on Passenger Class. Samples: 429, Survived: 77, Perished: 352",
-          "samples": 429,
-          "survived": 77,
-          "perished": 352,
+          "edgeLabel": "No (Male)",
+          "name": "Class = 1?",
           "children": [
             {
-              "name": "Age ≤ 53.0?",
-              "desc": "Split on Age. Samples: 99, Survived: 38, Perished: 61",
-              "samples": 99,
-              "survived": 38,
-              "perished": 61,
-              "children": [
-                {
-                  "name": "Fare ≤ 32.51?",
-                  "desc": "Split on Fare. Samples: 77, Survived: 35, Perished: 42",
-                  "samples": 77,
-                  "survived": 35,
-                  "perished": 42,
-                  "children": [
-                    {
-                      "name": "Survived",
-                      "type": "survived",
-                      "desc": "15 survived, 11 perished (n=26)",
-                      "samples": 26,
-                      "survived": 15,
-                      "perished": 11,
-                      "edgeLabel": "Fare ≤ 32.51"
-                    },
-                    {
-                      "name": "Perished",
-                      "type": "perished",
-                      "desc": "20 survived, 31 perished (n=51)",
-                      "samples": 51,
-                      "survived": 20,
-                      "perished": 31,
-                      "edgeLabel": "Fare > 32.51"
-                    }
-                  ],
-                  "edgeLabel": "Age ≤ 53.0"
-                },
-                {
-                  "name": "Perished",
-                  "type": "perished",
-                  "desc": "3 survived, 19 perished (n=22)",
-                  "samples": 22,
-                  "survived": 3,
-                  "perished": 19,
-                  "edgeLabel": "Age > 53.0"
-                }
-              ],
-              "edgeLabel": "Class ≤ 1"
-            },
-            {
-              "name": "Age ≤ 32.2?",
-              "desc": "Split on Age. Samples: 330, Survived: 39, Perished: 291",
-              "samples": 330,
-              "survived": 39,
-              "perished": 291,
-              "children": [
-                {
-                  "name": "Age ≤ 30.8?",
-                  "desc": "Split on Age. Samples: 225, Survived: 33, Perished: 192",
-                  "samples": 225,
-                  "survived": 33,
-                  "perished": 192,
-                  "children": [
-                    {
-                      "name": "Perished",
-                      "type": "perished",
-                      "desc": "25 survived, 179 perished (n=204)",
-                      "samples": 204,
-                      "survived": 25,
-                      "perished": 179,
-                      "edgeLabel": "Age ≤ 30.8"
-                    },
-                    {
-                      "name": "Perished",
-                      "type": "perished",
-                      "desc": "8 survived, 13 perished (n=21)",
-                      "samples": 21,
-                      "survived": 8,
-                      "perished": 13,
-                      "edgeLabel": "Age > 30.8"
-                    }
-                  ],
-                  "edgeLabel": "Age ≤ 32.2"
-                },
-                {
-                  "name": "Fare ≤ 7.91?",
-                  "desc": "Split on Fare. Samples: 105, Survived: 6, Perished: 99",
-                  "samples": 105,
-                  "survived": 6,
-                  "perished": 99,
-                  "children": [
-                    {
-                      "name": "Perished",
-                      "type": "perished",
-                      "desc": "0 survived, 32 perished (n=32)",
-                      "samples": 32,
-                      "survived": 0,
-                      "perished": 32,
-                      "edgeLabel": "Fare ≤ 7.91"
-                    },
-                    {
-                      "name": "Perished",
-                      "type": "perished",
-                      "desc": "6 survived, 67 perished (n=73)",
-                      "samples": 73,
-                      "survived": 6,
-                      "perished": 67,
-                      "edgeLabel": "Fare > 7.91"
-                    }
-                  ],
-                  "edgeLabel": "Age > 32.2"
-                }
-              ],
-              "edgeLabel": "Class > 1"
-            }
-          ],
-          "edgeLabel": "Age > 6.5"
-        }
-      ],
-      "edgeLabel": "Yes (Female)"
-    },
-    {
-      "name": "Class ≤ 2?",
-      "desc": "Split on Passenger Class. Samples: 261, Survived: 197, Perished: 64",
-      "samples": 261,
-      "survived": 197,
-      "perished": 64,
-      "children": [
-        {
-          "name": "Fare ≤ 28.86?",
-          "desc": "Split on Fare. Samples: 159, Survived: 150, Perished: 9",
-          "samples": 159,
-          "survived": 150,
-          "perished": 9,
-          "children": [
-            {
-              "name": "Age ≤ 37.0?",
-              "desc": "Split on Age. Samples: 69, Survived: 62, Perished: 7",
-              "samples": 69,
-              "survived": 62,
-              "perished": 7,
-              "children": [
-                {
-                  "name": "Age ≤ 27.5?",
-                  "desc": "Split on Age. Samples: 49, Survived: 46, Perished: 3",
-                  "samples": 49,
-                  "survived": 46,
-                  "perished": 3,
-                  "children": [
-                    {
-                      "name": "Survived",
-                      "type": "survived",
-                      "desc": "23 survived, 3 perished (n=26)",
-                      "samples": 26,
-                      "survived": 23,
-                      "perished": 3,
-                      "edgeLabel": "Age ≤ 27.5"
-                    },
-                    {
-                      "name": "Survived",
-                      "type": "survived",
-                      "desc": "23 survived, 0 perished (n=23)",
-                      "samples": 23,
-                      "survived": 23,
-                      "perished": 0,
-                      "edgeLabel": "Age > 27.5"
-                    }
-                  ],
-                  "edgeLabel": "Age ≤ 37.0"
-                },
-                {
-                  "name": "Survived",
-                  "type": "survived",
-                  "desc": "16 survived, 4 perished (n=20)",
-                  "samples": 20,
-                  "survived": 16,
-                  "perished": 4,
-                  "edgeLabel": "Age > 37.0"
-                }
-              ],
-              "edgeLabel": "Fare ≤ 28.86"
-            },
-            {
-              "name": "Fare ≤ 141.08?",
-              "desc": "Split on Fare. Samples: 90, Survived: 88, Perished: 2",
-              "samples": 90,
-              "survived": 88,
-              "perished": 2,
-              "children": [
-                {
-                  "name": "Survived",
-                  "type": "survived",
-                  "desc": "70 survived, 0 perished (n=70)",
-                  "samples": 70,
-                  "survived": 70,
-                  "perished": 0,
-                  "edgeLabel": "Fare ≤ 141.08"
-                },
-                {
-                  "name": "Survived",
-                  "type": "survived",
-                  "desc": "18 survived, 2 perished (n=20)",
-                  "samples": 20,
-                  "survived": 18,
-                  "perished": 2,
-                  "edgeLabel": "Fare > 141.08"
-                }
-              ],
-              "edgeLabel": "Fare > 28.86"
-            }
-          ],
-          "edgeLabel": "Class ≤ 2"
-        },
-        {
-          "name": "Fare ≤ 20.80?",
-          "desc": "Split on Fare. Samples: 102, Survived: 47, Perished: 55",
-          "samples": 102,
-          "survived": 47,
-          "perished": 55,
-          "children": [
-            {
-              "name": "Age ≤ 16.5?",
-              "desc": "Split on Age. Samples: 79, Survived: 44, Perished: 35",
-              "samples": 79,
-              "survived": 44,
-              "perished": 35,
-              "children": [
-                {
-                  "name": "Survived",
-                  "type": "survived",
-                  "desc": "16 survived, 4 perished (n=20)",
-                  "samples": 20,
-                  "survived": 16,
-                  "perished": 4,
-                  "edgeLabel": "Age ≤ 16.5"
-                },
-                {
-                  "name": "Age ≤ 27.5?",
-                  "desc": "Split on Age. Samples: 59, Survived: 28, Perished: 31",
-                  "samples": 59,
-                  "survived": 28,
-                  "perished": 31,
-                  "children": [
-                    {
-                      "name": "Survived",
-                      "type": "survived",
-                      "desc": "20 survived, 17 perished (n=37)",
-                      "samples": 37,
-                      "survived": 20,
-                      "perished": 17,
-                      "edgeLabel": "Age ≤ 27.5"
-                    },
-                    {
-                      "name": "Perished",
-                      "type": "perished",
-                      "desc": "8 survived, 14 perished (n=22)",
-                      "samples": 22,
-                      "survived": 8,
-                      "perished": 14,
-                      "edgeLabel": "Age > 27.5"
-                    }
-                  ],
-                  "edgeLabel": "Age > 16.5"
-                }
-              ],
-              "edgeLabel": "Fare ≤ 20.80"
-            },
-            {
+              "edgeLabel": "Class = 1",
               "name": "Perished",
-              "type": "perished",
-              "desc": "3 survived, 20 perished (n=23)",
-              "samples": 23,
-              "survived": 3,
-              "perished": 20,
-              "edgeLabel": "Fare > 20.80"
+              "type": "perished"
+            },
+            {
+              "edgeLabel": "Class != 1",
+              "name": "Perished",
+              "type": "perished"
             }
-          ],
-          "edgeLabel": "Class > 2"
+          ]
+        },
+        {
+          "edgeLabel": "Yes (Female)",
+          "name": "Survived",
+          "type": "survived"
         }
-      ],
-      "edgeLabel": "No (Male)"
+      ]
     }
-  ],
-  "type": "root",
-  "edgeLabel": "Start"
-};
+  ]
+}
+;
 
         // ========== D3 Tree Rendering ==========
         const container = document.getElementById('tree-container');
