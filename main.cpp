@@ -34,5 +34,7 @@ int main(int argc, char* argv[]) {
     double accuracy = calculateAccuracy(passengers, root.get());
     std::cout << "Accuracy of the decision tree: " << accuracy << "%" << std::endl;
 
+    exportTreeToJson(root.get(), "tree_cpp.json");
+
     return 0;
 }

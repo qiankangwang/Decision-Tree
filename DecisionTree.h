@@ -45,5 +45,6 @@ double findBestSplitForPclass(std::vector<Passenger>& passengers);
 std::unique_ptr<TreeNode> buildDecisionTree(std::vector<Passenger>& passengers, int depth, std::set<std::string>& usedFeatures);
 void printTreePreorder(const TreeNode* node);
 double calculateAccuracy(const std::vector<Passenger>& passengers, const TreeNode* root);
+void exportTreeToJson(const TreeNode* root, const std::string& filename);
 
 #endif

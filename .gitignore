@@ -10,3 +10,5 @@ test.csv
 
 # Generated files (can be regenerated)
 tree_data.json
+tree_cpp.json
+processed_train.txt
