@@ -71,7 +71,7 @@ void exportTreeToJson(const TreeNode* root, const std::string& filename) {
     }
 
     out << "{\n";
-    out << "  \"name\": \"Would this passenger\\nsurvive the Titanic?\",\n";
+    out << "  \"name\": \"Would this passenger survive the Titanic?\",\n";
     out << "  \"type\": \"root\",\n";
     out << "  \"children\": [\n";
     exportNodeToJson(root, out, 2, "Start");
