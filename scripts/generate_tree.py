@@ -47,25 +47,27 @@ def build_tree_json(tree, feature_names, node_id=0):
     display_name = FEATURE_NAMES.get(fname, fname)
 
     # For categorical-like splits (sex, pclass), show nicer labels
+    # sklearn left child = feature <= threshold, right child = feature > threshold
     if fname == "sex":
-        question = f"Sex = female?"
-        left_label = "Yes (Female)"
-        right_label = "No (Male)"
+        # sex: 0=male, 1=female; threshold ~0.5 → left=male, right=female
+        question = "Sex?"
+        left_label = "Male"
+        right_label = "Female"
     elif fname == "pclass":
-        question = f"Class ≤ {int(threshold)}?"
-        left_label = f"Class ≤ {int(threshold)}"
+        question = f"Class <= {int(threshold)}?"
+        left_label = f"Class <= {int(threshold)}"
         right_label = f"Class > {int(threshold)}"
     elif fname == "age":
-        question = f"Age ≤ {threshold:.1f}?"
-        left_label = f"Age ≤ {threshold:.1f}"
+        question = f"Age <= {threshold:.1f}?"
+        left_label = f"Age <= {threshold:.1f}"
         right_label = f"Age > {threshold:.1f}"
     elif fname == "fare":
-        question = f"Fare ≤ {threshold:.2f}?"
-        left_label = f"Fare ≤ {threshold:.2f}"
+        question = f"Fare <= {threshold:.2f}?"
+        left_label = f"Fare <= {threshold:.2f}"
         right_label = f"Fare > {threshold:.2f}"
     else:
-        question = f"{display_name} ≤ {threshold:.2f}?"
-        left_label = f"≤ {threshold:.2f}"
+        question = f"{display_name} <= {threshold:.2f}?"
+        left_label = f"<= {threshold:.2f}"
         right_label = f"> {threshold:.2f}"
 
     left_child = tree_.children_left[node_id]
@@ -132,7 +134,7 @@ def main():
 
     # Save JSON
     with open("tree_data.json", "w", encoding="utf-8") as f:
-        json.dump(tree_json, f, indent=2, ensure_ascii=False)
+        json.dump(tree_json, f, indent=2, ensure_ascii=True)
 
     print("Saved tree structure to tree_data.json")
     print("\n--- Tree Rules ---")

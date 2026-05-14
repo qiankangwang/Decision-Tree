@@ -47,7 +47,9 @@ An interactive visualization is automatically deployed via GitHub Actions:
 
 **https://xiaole5211314.github.io/Decision-Tree/**
 
-The demo shows the **actual tree trained by the C++ algorithm** on the Kaggle Titanic dataset. You can click nodes to expand/collapse, pan and zoom, or use the **Predict Survival** panel to walk through the tree interactively.
+The demo visualizes a decision tree trained on the Kaggle Titanic dataset (714 passengers with complete `pclass`/`sex`/`age`/`fare`, depth 5, 17 leaves, 82.9% training accuracy). You can click nodes to expand/collapse, pan and zoom, or use the **Predict Survival** panel to walk through the tree interactively.
+
+> The web demo uses a scikit-learn tree because it splits on four features and produces a richer structure to explore. The from-scratch C++ implementation currently splits only on **Sex** and **Pclass**, so its tree is intentionally shallow — it is the learning exercise, not the showcase.
 
 ## Build & Run (C++)
 
@@ -78,19 +80,18 @@ The C++ tree (trained on 712 passengers) achieves **77.9%** accuracy on the trai
 
 ## Visualization Setup
 
-The `index.html` demo is self-contained and reads the tree structure directly from an embedded JSON object. To regenerate the JSON from the C++ tree after training:
+The `index.html` demo is fully self-contained — D3.js is loaded from a CDN and the tree structure is embedded directly as a JSON object, so it runs by simply opening the file in a browser.
 
-```bash
-# After running ./decision_tree, tree_cpp.json is produced automatically.
-# Then update the demo by replacing the treeData object in index.html.
-```
-
-To train a reference tree with sklearn (for comparison):
+To regenerate the embedded tree from the Kaggle dataset:
 
 ```bash
 pip install pandas scikit-learn
-python scripts/generate_tree.py
+python scripts/generate_tree.py   # writes tree_data.json
 ```
+
+Then replace the `treeData` object in `index.html` with the contents of `tree_data.json`.
+
+The C++ program also exports its own (shallower) tree to `tree_cpp.json` on each run, which can be embedded the same way if you want the demo to reflect the from-scratch implementation instead.
 
 ## How It Works
 
