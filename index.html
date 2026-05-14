@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titanic Decision Tree — Interactive Demo</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0b0f19;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(11, 15, 25, 0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #1f2937;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 18px; font-weight: 600; color: #f8fafc; }
+        .header .subtitle { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .btn {
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+            background: #111827;
+            color: #e2e8f0;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #1f2937; border-color: #4b5563; }
+        .btn-primary {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover { background: #2563eb; }
+        .btn.active { background: #10b981; border-color: #10b981; color: white; }
+
+        #tree-container {
+            width: 100vw;
+            height: 100vh;
+            padding-top: 75px;
+            cursor: grab;
+        }
+        #tree-container:active { cursor: grabbing; }
+
+        .node circle {
+            fill: #111827;
+            stroke: #60a5fa;
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .node circle.leaf-survived {
+            stroke: #34d399;
+            fill: #064e3b;
+        }
+        .node circle.leaf-perished {
+            stroke: #f87171;
+            fill: #7f1d1d;
+        }
+        .node circle:hover {
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 6px currentColor);
+        }
+        .node circle.highlighted {
+            stroke: #fbbf24;
+            stroke-width: 4px;
+            fill: #451a03;
+            filter: drop-shadow(0 0 10px #fbbf24);
+        }
+
+        .node text {
+            font-size: 12px;
+            fill: #e2e8f0;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            font-weight: 500;
+        }
+
+        .link {
+            fill: none;
+            stroke: #374151;
+            stroke-width: 1.5px;
+            transition: all 0.4s ease;
+        }
+        .link.highlighted {
+            stroke: #fbbf24;
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 4px #fbbf24);
+        }
+
+        .link-label {
+            font-size: 11px;
+            fill: #9ca3af;
+            text-anchor: middle;
+        }
+        .link-label-bg {
+            fill: #0b0f19;
+        }
+
+        .quiz-panel {
+            position: fixed;
+            right: -400px;
+            top: 75px;
+            width: 360px;
+            bottom: 20px;
+            background: rgba(17, 24, 39, 0.96);
+            backdrop-filter: blur(10px);
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 22px;
+            transition: right 0.3s ease;
+            z-index: 90;
+            display: flex;
+            flex-direction: column;
+        }
+        .quiz-panel.open { right: 18px; }
+        .quiz-panel h2 { font-size: 15px; margin-bottom: 14px; color: #f8fafc; }
+        .quiz-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .question {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 22px;
+            line-height: 1.5;
+            color: #f8fafc;
+        }
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .quiz-option {
+            padding: 13px 16px;
+            border-radius: 10px;
+            border: 1px solid #374151;
+            background: #111827;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            color: #e2e8f0;
+        }
+        .quiz-option:hover {
+            border-color: #3b82f6;
+            background: #1e3a5f;
+        }
+        .result-box {
+            text-align: center;
+            padding: 22px;
+            border-radius: 12px;
+            margin-top: 14px;
+        }
+        .result-box.survived {
+            background: rgba(52, 211, 153, 0.12);
+            border: 1px solid #34d399;
+        }
+        .result-box.perished {
+            background: rgba(248, 113, 113, 0.12);
+            border: 1px solid #f87171;
+        }
+        .result-box .result-icon { font-size: 44px; margin-bottom: 10px; }
+        .result-box .result-text { font-size: 19px; font-weight: 700; }
+        .result-box.survived .result-text { color: #34d399; }
+        .result-box.perished .result-text { color: #f87171; }
+        .result-box .result-desc {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+        .path-summary {
+            margin-top: 18px;
+            padding: 14px;
+            background: #0b0f19;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.7;
+        }
+        .path-summary .path-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #1f2937;
+            margin: 2px;
+            font-size: 11px;
+            color: #d1d5db;
+        }
+        .restart-btn { margin-top: auto; padding-top: 14px; }
+
+        .tooltip {
+            position: absolute;
+            padding: 8px 12px;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #e2e8f0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 200;
+            max-width: 220px;
+            line-height: 1.4;
+        }
+
+        .legend {
+            position: fixed;
+            bottom: 18px;
+            left: 18px;
+            background: rgba(17, 24, 39, 0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 11px;
+            z-index: 90;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .legend-item:last-child { margin-bottom: 0; }
+        .legend-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Titanic Decision Tree — Interactive Demo</h1>
+            <div class="subtitle">Explore a trained decision tree for survival prediction. Click nodes to expand/collapse, or take the quiz to trace a path.</div>
+        </div>
+        <div class="controls">
+            <button class="btn" onclick="expandAll()">Expand All</button>
+            <button class="btn" onclick="collapseAll()">Collapse All</button>
+            <button class="btn" id="quizBtn" onclick="toggleQuiz()">Predict Survival</button>
+        </div>
+    </div>
+
+    <div id="tree-container"></div>
+
+    <div class="quiz-panel" id="quizPanel">
+        <h2>Predict Survival</h2>
+        <div class="quiz-content" id="quizContent">
+            <div class="question" id="quizQuestion">Answer a few questions to see how the decision tree classifies a passenger.</div>
+            <div class="quiz-options" id="quizOptions">
+                <button class="quiz-option btn-primary" onclick="startQuiz()">Start</button>
+            </div>
+        </div>
+        <div class="restart-btn" id="restartArea" style="display:none;">
+            <button class="btn" onclick="startQuiz()" style="width:100%;">Try Again</button>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="border-color:#60a5fa;background:#111827"></div> Decision Node</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:#34d399;background:#064e3b"></div> Survived</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:#f87171;background:#7f1d1d"></div> Perished</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:#fbbf24;background:#451a03"></div> Active Path</div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // ========== Titanic Decision Tree Data ==========
+        // Based on the classic "Women and children first" split pattern
+        const treeData = {
+            name: "Would this passenger\nsurvive the Titanic?",
+            type: "root",
+            desc: "Root node: begin evaluation",
+            children: [
+                {
+                    name: "Sex = female?",
+                    edgeLabel: "Start",
+                    desc: "First split by gender — the most informative feature",
+                    children: [
+                        {
+                            name: "Pclass ≤ 2\nor Age ≤ 10?",
+                            edgeLabel: "Yes (female)",
+                            desc: "For females, class and age matter",
+                            children: [
+                                {
+                                    name: "✅ Survived\n(Likely)",
+                                    edgeLabel: "Yes",
+                                    type: "survived",
+                                    desc: "Women from 1st/2nd class and young girls had very high survival rates (~95%)."
+                                },
+                                {
+                                    name: "Fare > 20\nor SibSp > 0?",
+                                    edgeLabel: "No (3rd class)",
+                                    desc: "Third-class women: family and fare paid can hint at priority boarding",
+                                    children: [
+                                        { name: "✅ Survived", edgeLabel: "Yes", type: "survived", desc: "Third-class women with family or higher fare still had decent survival odds (~50%)." },
+                                        { name: "❌ Perished", edgeLabel: "No", type: "perished", desc: "Single, low-fare, third-class women faced harsh conditions and lower priority for lifeboats." }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            name: "Age ≤ 8?",
+                            edgeLabel: "No (male)",
+                            desc: "For males, only very young boys had decent survival chances",
+                            children: [
+                                { name: "✅ Survived\n(Boy)", edgeLabel: "Yes", type: "survived", desc: "Young boys were often evacuated with their mothers, giving them a survival chance." },
+                                {
+                                    name: "Pclass = 1\nand Fare > 50?",
+                                    edgeLabel: "No (adult male)",
+                                    desc: "Adult men: only wealthy first-class had any notable survival chance",
+                                    children: [
+                                        { name: "✅ Survived", edgeLabel: "Yes", type: "survived", desc: "Wealthy first-class men sometimes secured seats in lifeboats or had cabin proximity advantages." },
+                                        { name: "❌ Perished", edgeLabel: "No", type: "perished", desc: "The vast majority of adult men from 2nd/3rd class did not survive. 'Women and children first' was enforced strictly." }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // ========== D3 Tree Rendering ==========
+        const container = document.getElementById('tree-container');
+        let width = container.clientWidth;
+        let height = container.clientHeight;
+
+        const svg = d3.select("#tree-container").append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", [-width/2, -80, width, height]);
+
+        const g = svg.append("g");
+
+        const zoom = d3.zoom()
+            .scaleExtent([0.3, 3])
+            .on("zoom", (e) => g.attr("transform", e.transform));
+        svg.call(zoom);
+
+        let i = 0;
+        const duration = 400;
+        let root;
+
+        const tree = d3.tree().nodeSize([55, 190]);
+
+        root = d3.hierarchy(treeData, d => d.children);
+        root.x0 = 0;
+        root.y0 = 0;
+
+        if (root.children) {
+            root.children.forEach(collapse);
+        }
+
+        update(root);
+
+        setTimeout(() => {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(width/2, 110).scale(0.82)
+            );
+        }, 100);
+
+        function collapse(d) {
+            if (d.children) {
+                d._children = d.children;
+                d._children.forEach(collapse);
+                d.children = null;
+            }
+        }
+
+        function expand(d) {
+            if (d._children) {
+                d.children = d._children;
+                d._children = null;
+            }
+            if (d.children) d.children.forEach(expand);
+        }
+
+        function update(source) {
+            const treeData = tree(root);
+            const nodes = treeData.descendants();
+            const links = treeData.links();
+
+            nodes.forEach(d => d.y = d.depth * 185);
+
+            const node = g.selectAll('g.node')
+                .data(nodes, d => d.id || (d.id = ++i));
+
+            const nodeEnter = node.enter().append('g')
+                .attr('class', 'node')
+                .attr("transform", d => `translate(${source.x0},${source.y0})`)
+                .on('click', (e, d) => {
+                    if (d.children) {
+                        d._children = d.children;
+                        d.children = null;
+                    } else {
+                        d.children = d._children;
+                        d._children = null;
+                    }
+                    update(d);
+                })
+                .on('mouseover', function(e, d) {
+                    const tooltip = document.getElementById('tooltip');
+                    if (d.data.desc) {
+                        tooltip.innerHTML = d.data.desc;
+                        tooltip.style.opacity = 1;
+                        tooltip.style.left = (e.pageX + 12) + 'px';
+                        tooltip.style.top = (e.pageY - 12) + 'px';
+                    }
+                })
+                .on('mouseout', () => {
+                    document.getElementById('tooltip').style.opacity = 0;
+                });
+
+            nodeEnter.append('circle')
+                .attr('r', 1e-6)
+                .attr('class', d => {
+                    if (d.data.type === 'survived') return 'leaf-survived';
+                    if (d.data.type === 'perished') return 'leaf-perished';
+                    return '';
+                });
+
+            nodeEnter.append('text')
+                .attr("dy", d => d.data.type ? 36 : -16)
+                .style("fill-opacity", 1e-6)
+                .each(function(d) {
+                    const el = d3.select(this);
+                    const lines = d.data.name.split('\n');
+                    lines.forEach((line, idx) => {
+                        el.append('tspan')
+                            .attr('x', 0)
+                            .attr('dy', idx === 0 ? 0 : '1.2em')
+                            .text(line);
+                    });
+                });
+
+            const nodeUpdate = node.merge(nodeEnter).transition().duration(duration)
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            nodeUpdate.select('circle')
+                .attr('r', d => d.data.type ? 22 : 14)
+                .attr('cursor', 'pointer');
+
+            nodeUpdate.select('text')
+                .style("fill-opacity", 1);
+
+            const nodeExit = node.exit().transition().duration(duration)
+                .attr("transform", d => `translate(${source.x},${source.y})`)
+                .remove();
+
+            nodeExit.select('circle').attr('r', 1e-6);
+            nodeExit.select('text').style("fill-opacity", 1e-6);
+
+            const link = g.selectAll('path.link')
+                .data(links, d => d.target.id);
+
+            const linkEnter = link.enter().insert('path', "g")
+                .attr("class", "link")
+                .attr('d', d => {
+                    const o = {x: source.x0, y: source.y0};
+                    return diagonal(o, o);
+                });
+
+            link.merge(linkEnter).transition().duration(duration)
+                .attr('d', d => diagonal(d.source, d.target));
+
+            link.exit().transition().duration(duration)
+                .attr('d', d => {
+                    const o = {x: source.x, y: source.y};
+                    return diagonal(o, o);
+                })
+                .remove();
+
+            const linkLabel = g.selectAll('g.link-label-group')
+                .data(links, d => d.target.id);
+
+            const labelEnter = linkLabel.enter().append('g')
+                .attr('class', 'link-label-group')
+                .attr('opacity', 1e-6);
+
+            labelEnter.append('rect')
+                .attr('class', 'link-label-bg')
+                .attr('rx', 4);
+
+            labelEnter.append('text')
+                .attr('class', 'link-label')
+                .text(d => d.target.data.edgeLabel || '');
+
+            const labelUpdate = linkLabel.merge(labelEnter).transition().duration(duration)
+                .attr('opacity', 1)
+                .attr('transform', d => `translate(${(d.source.x + d.target.x)/2}, ${(d.source.y + d.target.y)/2})`);
+
+            labelUpdate.each(function(d) {
+                const text = d3.select(this).select('text');
+                const bbox = text.node().getBBox();
+                d3.select(this).select('rect')
+                    .attr('x', bbox.x - 4)
+                    .attr('y', bbox.y - 2)
+                    .attr('width', bbox.width + 8)
+                    .attr('height', bbox.height + 4);
+            });
+
+            linkLabel.exit().transition().duration(duration).attr('opacity', 1e-6).remove();
+
+            nodes.forEach(d => {
+                d.x0 = d.x;
+                d.y0 = d.y;
+            });
+        }
+
+        function diagonal(s, d) {
+            return `M ${s.x} ${s.y}
+                    C ${s.x} ${(s.y + d.y) / 2},
+                      ${d.x} ${(s.y + d.y) / 2},
+                      ${d.x} ${d.y}`;
+        }
+
+        function expandAll() {
+            expand(root);
+            update(root);
+        }
+
+        function collapseAll() {
+            if (root.children) {
+                root.children.forEach(collapse);
+            }
+            update(root);
+        }
+
+        // ========== Quiz Interaction ==========
+        let quizOpen = false;
+        let currentQuizNode = null;
+        let quizPath = [];
+
+        function toggleQuiz() {
+            quizOpen = !quizOpen;
+            document.getElementById('quizPanel').classList.toggle('open', quizOpen);
+            document.getElementById('quizBtn').classList.toggle('active', quizOpen);
+            if (quizOpen) {
+                resetHighlight();
+                startQuiz();
+            }
+        }
+
+        function startQuiz() {
+            currentQuizNode = root;
+            quizPath = [root];
+            showQuizState();
+            highlightPath(quizPath);
+        }
+
+        function showQuizState() {
+            const qEl = document.getElementById('quizQuestion');
+            const optsEl = document.getElementById('quizOptions');
+            const restart = document.getElementById('restartArea');
+
+            if (!currentQuizNode.children && !currentQuizNode._children) {
+                const survived = currentQuizNode.data.type === 'survived';
+                qEl.innerHTML = '';
+                let resultHtml = `<div class="result-box ${survived ? 'survived' : 'perished'}">`;
+                resultHtml += `<div class="result-icon">${survived ? '🛟' : '⚰️'}</div>`;
+                resultHtml += `<div class="result-text">${currentQuizNode.data.name.replace(/\n/g, ' ')}</div>`;
+                if (currentQuizNode.data.desc) {
+                    resultHtml += `<div class="result-desc">${currentQuizNode.data.desc}</div>`;
+                }
+                resultHtml += '</div>';
+
+                resultHtml += '<div class="path-summary"><strong>Decision Path:</strong><br>';
+                quizPath.forEach((node, idx) => {
+                    if (idx > 0) resultHtml += ' → ';
+                    resultHtml += `<span class="path-tag">${node.data.edgeLabel || 'Start'}</span>`;
+                });
+                resultHtml += '</div>';
+
+                optsEl.innerHTML = resultHtml;
+                restart.style.display = 'block';
+                return;
+            }
+
+            if (currentQuizNode._children) {
+                currentQuizNode.children = currentQuizNode._children;
+                currentQuizNode._children = null;
+                update(currentQuizNode);
+            }
+
+            restart.style.display = 'none';
+            qEl.textContent = currentQuizNode.data.name.replace(/\n/g, ' ');
+
+            const children = currentQuizNode.children;
+            optsEl.innerHTML = '';
+            children.forEach(child => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option';
+                btn.textContent = child.data.edgeLabel || 'Choose';
+                btn.onclick = () => {
+                    currentQuizNode = child;
+                    quizPath.push(child);
+                    showQuizState();
+                    highlightPath(quizPath);
+                };
+                optsEl.appendChild(btn);
+            });
+        }
+
+        function highlightPath(pathNodes) {
+            resetHighlight();
+
+            const pathIds = new Set(pathNodes.map(d => d.id));
+            const linkTargets = new Set();
+            for (let i = 1; i < pathNodes.length; i++) {
+                linkTargets.add(pathNodes[i].id);
+            }
+
+            d3.selectAll('.node circle')
+                .classed('highlighted', d => pathIds.has(d.id));
+
+            d3.selectAll('.link')
+                .classed('highlighted', d => linkTargets.has(d.target.id));
+        }
+
+        function resetHighlight() {
+            d3.selectAll('.node circle').classed('highlighted', false);
+            d3.selectAll('.link').classed('highlighted', false);
+        }
+
+        window.addEventListener('resize', () => {
+            width = container.clientWidth;
+            height = container.clientHeight;
+            svg.attr("viewBox", [-width/2, -80, width, height]);
+        });
+    </script>
+</body>
+</html>
