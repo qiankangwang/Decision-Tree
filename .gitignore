@@ -1,0 +1,12 @@
+
+# Build artifacts
+decision_tree.exe
+*.o
+
+# Datasets (user should download from Kaggle)
+titanic.csv
+train.csv
+test.csv
+
+# Generated files (can be regenerated)
+tree_data.json
