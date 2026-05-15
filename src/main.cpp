@@ -1,14 +1,25 @@
 #include "DecisionTree.h"
+#include <cstring>
 
 int main(int argc, char* argv[]) {
-    std::string filename = (argc > 1) ? argv[1] : "processed_train_simple.txt";
+    std::string filename = "processed_train_simple.txt";
+    bool verbose = false;
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "-v") == 0 || std::strcmp(argv[i], "--verbose") == 0) {
+            verbose = true;
+        } else {
+            filename = argv[i];
+        }
+    }
 
     std::vector<Passenger> passengers = readPassengers(filename);
     if (passengers.empty()) {
         return 1;
     }
 
-    printPassengers(passengers);
+    if (verbose) {
+        printPassengers(passengers);
+    }
 
     double bestSplit = findBestSplit(passengers);
     std::cout << std::endl << "Gini impurity for best split Age: " << bestSplit << std::endl;

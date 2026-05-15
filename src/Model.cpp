@@ -52,7 +52,7 @@ void partitionPassengers(const std::vector<Passenger>& passengers,
     }
 }
 
-std::unique_ptr<TreeNode> buildDecisionTree(std::vector<Passenger>& passengers,
+std::unique_ptr<TreeNode> buildDecisionTree(const std::vector<Passenger>& passengers,
                                             int depth,
                                             std::set<std::string>& usedFeatures) {
     if (passengers.empty() || depth > MAX_DEPTH) {

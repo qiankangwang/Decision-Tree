@@ -1,6 +1,7 @@
 #include "DecisionTree.h"
+#include <algorithm>
 
-double calculateGiniForSex(std::vector<Passenger>& passengers) {
+double calculateGiniForSex(const std::vector<Passenger>& passengers) {
     double countFemale = 0, countMale = 0;
     double survivedFemale = 0, survivedMale = 0;
 
@@ -38,7 +39,7 @@ double calculateGiniForSex(std::vector<Passenger>& passengers) {
     return totalGini;
 }
 
-double calculateGiniForPclass(std::vector<Passenger>& passengers) {
+double calculateGiniForPclass(const std::vector<Passenger>& passengers) {
     double count[3] = { 0, 0, 0 };
     double survivedCount[3] = { 0, 0, 0 };
 
@@ -66,7 +67,7 @@ double calculateGiniForPclass(std::vector<Passenger>& passengers) {
     return totalGini;
 }
 
-double findBestSplitForPclass(std::vector<Passenger>& passengers) {
+double findBestSplitForPclass(const std::vector<Passenger>& passengers) {
     int counts[3] = { 0, 0, 0 };
     int survivedCounts[3] = { 0, 0, 0 };
 
@@ -86,7 +87,7 @@ double findBestSplitForPclass(std::vector<Passenger>& passengers) {
 
     for (int i = 0; i < 3; i++) {
         if (counts[i] > 0) {
-            double pSurvived = survivedCounts[i] / counts[i];
+            double pSurvived = static_cast<double>(survivedCounts[i]) / counts[i];
             double gini = 1 - (pSurvived * pSurvived) - (1 - pSurvived) * (1 - pSurvived);
             double weightedGini = (counts[i] / total) * gini;
             if (weightedGini < bestGini) {
@@ -99,71 +100,52 @@ double findBestSplitForPclass(std::vector<Passenger>& passengers) {
     return bestSplit;
 }
 
-void selectionSort(std::vector<Passenger>& passengers) {
-    for (size_t i = 0; i < passengers.size() - 1; i++) {
-        size_t minIndex = i;
-        for (size_t j = i + 1; j < passengers.size(); j++) {
-            if (passengers[j].age < passengers[minIndex].age) {
-                minIndex = j;
-            }
-        }
-        if (minIndex != i) {
-            std::swap(passengers[i], passengers[minIndex]);
-        }
-    }
-}
-
-double calculateGini(int counts[2], double total) {
+static double calculateGini(const int counts[2], double total) {
     if (total == 0) {
         return 0;
     }
-
-    double sum = 0;
-    for (int i = 0; i < 2; ++i) {
-        double probability = counts[i] / total;
-        sum += probability * probability;
-    }
-
-    return 1 - sum;
+    double p0 = counts[0] / total;
+    double p1 = counts[1] / total;
+    return 1 - (p0 * p0 + p1 * p1);
 }
 
-double findBestSplit(std::vector<Passenger>& passengers) {
-    std::vector<Passenger> sortedPassengers = passengers;
-    selectionSort(sortedPassengers);
+double findBestSplit(const std::vector<Passenger>& passengers) {
+    std::vector<Passenger> sorted = passengers;
+    std::sort(sorted.begin(), sorted.end(),
+              [](const Passenger& a, const Passenger& b) { return a.age < b.age; });
+
+    const size_t total = sorted.size();
+    if (total < 2) return -1.0;
+
+    int totalCounts[2] = { 0, 0 };
+    for (const auto& p : sorted) totalCounts[p.survived]++;
 
     double bestGini = 1.0;
     double bestSplit = -1.0;
-    size_t total = sortedPassengers.size();
+    int leftCounts[2] = { 0, 0 };
 
     for (size_t i = 1; i < total; i++) {
-        if (sortedPassengers[i].age != sortedPassengers[i - 1].age) {
-            double currentSplit = (sortedPassengers[i].age + sortedPassengers[i - 1].age) / 2.0;
+        leftCounts[sorted[i - 1].survived]++;
+        if (sorted[i].age == sorted[i - 1].age) continue;
 
-            int leftCounts[2] = { 0, 0 };
-            int rightCounts[2] = { 0, 0 };
-
-            for (size_t j = 0; j < i; j++) {
-                leftCounts[sortedPassengers[j].survived]++;
-            }
-            for (size_t j = i; j < total; j++) {
-                rightCounts[sortedPassengers[j].survived]++;
-            }
-
-            double leftGini = calculateGini(leftCounts, static_cast<double>(i));
-            double rightGini = calculateGini(rightCounts, static_cast<double>(total - i));
-
-            double weightedGini = (static_cast<double>(i) * leftGini + static_cast<double>(total - i) * rightGini) / static_cast<double>(total);
-            if (weightedGini < bestGini) {
-                bestGini = weightedGini;
-                bestSplit = currentSplit;
-            }
+        int rightCounts[2] = {
+            totalCounts[0] - leftCounts[0],
+            totalCounts[1] - leftCounts[1],
+        };
+        double currentSplit = (sorted[i].age + sorted[i - 1].age) / 2.0;
+        double leftGini = calculateGini(leftCounts, static_cast<double>(i));
+        double rightGini = calculateGini(rightCounts, static_cast<double>(total - i));
+        double weightedGini = (i * leftGini + (total - i) * rightGini) / total;
+        if (weightedGini < bestGini) {
+            bestGini = weightedGini;
+            bestSplit = currentSplit;
         }
     }
 
     return bestSplit;
 }
 
-double calculateGiniAtSplit(std::vector<Passenger>& passengers, double splitAge) {
+double calculateGiniAtSplit(const std::vector<Passenger>& passengers, double splitAge) {
     int leftCounts[2] = { 0, 0 };
     int rightCounts[2] = { 0, 0 };
 
@@ -183,6 +165,7 @@ double calculateGiniAtSplit(std::vector<Passenger>& passengers, double splitAge)
     double rightGini = calculateGini(rightCounts, rightTotal);
 
     double total = leftTotal + rightTotal;
+    if (total == 0) return 0.0;
     double totalGini = (leftTotal * leftGini + rightTotal * rightGini) / total;
 
     return totalGini;
