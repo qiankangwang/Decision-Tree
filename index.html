@@ -568,7 +568,7 @@
             document.getElementById('loading').style.display = 'none';
 
             requestAnimationFrame(() => {
-                fitToScreen(false);
+                centerOnNode(root, false);
                 svg.transition().duration(200).style('opacity', 1);
             });
         }
@@ -613,15 +613,21 @@
             return `n=${data.samples} · ${data.survived} / ${data.perished}`;
         }
 
+        // Comfortable zoom for reading individual nodes. centerOnNode
+        // snaps UP to this scale but won't pull you back from a closer zoom.
+        const FOCUS_SCALE = 1.2;
+
         function centerOnNode(d, animate = true) {
             if (!d || !svg) return;
             const t = d3.zoomTransform(svg.node());
+            const k = Math.max(t.k, FOCUS_SCALE);
             const W = container.clientWidth, H = container.clientHeight;
             const topPad = 80;
             const usableH = H - topPad - 30;
-            const targetX = W / 2 - d.x * t.k;
-            const targetY = topPad + usableH / 2 - d.y * t.k;
-            const newT = d3.zoomIdentity.translate(targetX, targetY).scale(t.k);
+            // Bias the node slightly above center so its children stay visible below
+            const targetX = W / 2 - d.x * k;
+            const targetY = topPad + usableH * 0.4 - d.y * k;
+            const newT = d3.zoomIdentity.translate(targetX, targetY).scale(k);
             const sel = animate ? svg.transition().duration(450) : svg;
             sel.call(zoom.transform, newT);
         }
@@ -953,7 +959,7 @@
         // ========== Lifecycle ==========
         window.addEventListener('load', initTree);
         window.addEventListener('resize', () => {
-            if (g) fitToScreen(false);
+            if (g) centerOnNode(root, false);
         });
     </script>
 </body>
