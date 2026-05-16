@@ -147,10 +147,18 @@
         .node.leaf-survived .node-sub { fill: var(--survived-stroke); }
         .node.leaf-perished .node-sub { fill: var(--perished-stroke); }
 
-        /* Class-proportion bar inside decision nodes (bottom of the circle) */
-        .node .bar-bg { fill: #e5e7eb; }
-        .node .bar-survived { fill: var(--survived-stroke); }
-        .node .bar-perished { fill: var(--perished-stroke); }
+        /* Survival-proportion progress ring sitting just outside the circle */
+        .node .ring-bg {
+            fill: none;
+            stroke: #e5e7eb;
+            stroke-width: 2px;
+        }
+        .node .ring-survived {
+            fill: none;
+            stroke: var(--survived-stroke);
+            stroke-width: 2.5px;
+            stroke-linecap: round;
+        }
 
         .link {
             fill: none;
@@ -592,7 +600,8 @@
         // Radii so links attach to circle edges, not centers.
         const NODE_R = 48;            // decision circle radius
         const LEAF_R = 38;            // leaf circle radius
-        function nodeHalfH(d) { return isLeaf(d) ? LEAF_R : NODE_R; }
+        const RING_R = NODE_R + 6;    // proportion ring sits 6px outside the circle
+        function nodeHalfH(d) { return isLeaf(d) ? LEAF_R : RING_R + 1; }
 
         function diagonal(s, d, sExtent, dExtent) {
             const sBottom = s.y + (sExtent ?? NODE_HALF_H);
@@ -730,24 +739,21 @@
                 })
                 .text(d => formatSub(d));
 
-            // Class-proportion bar inside decision circles (near bottom of circle)
+            // Survival-proportion progress ring around decision circles
             nodeEnter.filter(d => !isLeaf(d) && d.data.samples)
                 .each(function(d) {
                     const grp = d3.select(this);
-                    // At y=24 inside r=48 circle, chord half-width = sqrt(48^2 - 24^2) ~ 41
-                    const barW = 60, barX = -barW / 2, barY = 26, barH = 4;
-                    const survivedFrac = d.data.survived / d.data.samples;
-                    grp.append('rect')
-                        .attr('class', 'bar-bg')
-                        .attr('x', barX).attr('y', barY)
-                        .attr('width', barW).attr('height', barH)
-                        .attr('rx', 2);
-                    grp.append('rect')
-                        .attr('class', 'bar-survived')
-                        .attr('x', barX).attr('y', barY)
-                        .attr('width', Math.max(2, barW * survivedFrac))
-                        .attr('height', barH)
-                        .attr('rx', 2);
+                    const circ = 2 * Math.PI * RING_R;
+                    const survivedLen = (d.data.survived / d.data.samples) * circ;
+                    grp.append('circle')
+                        .attr('class', 'ring-bg')
+                        .attr('r', RING_R);
+                    grp.append('circle')
+                        .attr('class', 'ring-survived')
+                        .attr('r', RING_R)
+                        // Start at 12 o'clock and sweep clockwise.
+                        .attr('transform', 'rotate(-90)')
+                        .attr('stroke-dasharray', `${survivedLen} ${circ}`);
                 });
 
             const nodeUpdate = node.merge(nodeEnter);
