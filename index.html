@@ -617,16 +617,31 @@
         // snaps UP to this scale but won't pull you back from a closer zoom.
         const FOCUS_SCALE = 1.2;
 
+        // Quiz panel covers ~360px on the right when open; the rest of the
+        // viewport is what we can actually use for the tree.
+        function getUsableBounds() {
+            const W = container.clientWidth, H = container.clientHeight;
+            const panelOpen = document.getElementById('quizPanel').classList.contains('open');
+            const leftPad = 30;
+            const rightPad = panelOpen ? 380 : 30;
+            const topPad = 85;
+            const bottomPad = 30;
+            return {
+                left: leftPad,
+                top: topPad,
+                width: W - leftPad - rightPad,
+                height: H - topPad - bottomPad
+            };
+        }
+
         function centerOnNode(d, animate = true, dur = 450) {
             if (!d || !svg) return;
             const t = d3.zoomTransform(svg.node());
             const k = Math.max(t.k, FOCUS_SCALE);
-            const W = container.clientWidth, H = container.clientHeight;
-            const topPad = 80;
-            const usableH = H - topPad - 30;
+            const u = getUsableBounds();
             // Bias the node slightly above center so its children stay visible below
-            const targetX = W / 2 - d.x * k;
-            const targetY = topPad + usableH * 0.4 - d.y * k;
+            const targetX = u.left + u.width / 2 - d.x * k;
+            const targetY = u.top + u.height * 0.4 - d.y * k;
             const newT = d3.zoomIdentity.translate(targetX, targetY).scale(k);
             const sel = animate ? svg.transition().duration(dur).ease(d3.easeCubicInOut) : svg;
             sel.call(zoom.transform, newT);
@@ -828,19 +843,16 @@
             const bounds = g.node().getBBox();
             if (!bounds.width || !bounds.height) return;
 
-            const W = container.clientWidth;
-            const H = container.clientHeight;
-            const topPad = 85;
-            const usableH = H - topPad - 30;
-            const pad = 70;
+            const u = getUsableBounds();
+            const pad = 40;
 
             const scale = Math.min(
-                W / (bounds.width + pad * 2),
-                usableH / (bounds.height + pad * 2),
+                u.width / (bounds.width + pad * 2),
+                u.height / (bounds.height + pad * 2),
                 1.2
             );
-            const tx = W / 2 - (bounds.x + bounds.width / 2) * scale;
-            const ty = topPad + (usableH - bounds.height * scale) / 2 - bounds.y * scale;
+            const tx = u.left + u.width / 2 - (bounds.x + bounds.width / 2) * scale;
+            const ty = u.top + u.height / 2 - (bounds.y + bounds.height / 2) * scale;
 
             const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
             if (animate) {
