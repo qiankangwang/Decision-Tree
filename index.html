@@ -113,32 +113,32 @@
         }
         #tree-container:active { cursor: grabbing; }
 
-        .node rect {
+        .node circle.card {
             fill: var(--node-fill);
             stroke: var(--node-stroke);
-            stroke-width: 1.5px;
+            stroke-width: 2px;
             cursor: pointer;
             transition: stroke 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease;
         }
-        .node.leaf-survived rect { stroke: var(--survived-stroke); fill: var(--survived-fill); }
-        .node.leaf-perished rect { stroke: var(--perished-stroke); fill: var(--perished-fill); }
-        .node.collapsed rect { stroke-dasharray: 4 3; fill: var(--collapsed-fill); }
-        .node:hover rect { stroke-width: 2.5px; }
-        .node.highlighted rect {
+        .node.leaf-survived circle.card { stroke: var(--survived-stroke); fill: var(--survived-fill); }
+        .node.leaf-perished circle.card { stroke: var(--perished-stroke); fill: var(--perished-fill); }
+        .node.collapsed circle.card { stroke-dasharray: 4 3; fill: var(--collapsed-fill); }
+        .node:hover circle.card { stroke-width: 3px; }
+        .node.highlighted circle.card {
             stroke: var(--highlight);
-            stroke-width: 2.5px;
+            stroke-width: 3px;
             fill: var(--highlight-fill);
         }
 
         .node .node-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             fill: var(--text);
             text-anchor: middle;
             pointer-events: none;
         }
         .node .node-sub {
-            font-size: 10.5px;
+            font-size: 10px;
             fill: var(--text-muted);
             text-anchor: middle;
             pointer-events: none;
@@ -147,7 +147,7 @@
         .node.leaf-survived .node-sub { fill: var(--survived-stroke); }
         .node.leaf-perished .node-sub { fill: var(--perished-stroke); }
 
-        /* Class-proportion bar inside decision nodes */
+        /* Class-proportion bar inside decision nodes (bottom of the circle) */
         .node .bar-bg { fill: #e5e7eb; }
         .node .bar-survived { fill: var(--survived-stroke); }
         .node .bar-perished { fill: var(--perished-stroke); }
@@ -398,7 +398,7 @@
         // with complete pclass/sex/age/fare). max_depth=5, min_samples_leaf=20.
         // Regenerate with: python scripts/generate_tree.py
         const treeData = {
-  "name": "Would this passenger\nsurvive the Titanic?",
+  "name": "Sex?",
   "desc": "Root split on Sex. Samples: 714, Survived: 290, Perished: 424",
   "samples": 714, "survived": 290, "perished": 424,
   "type": "root", "edgeLabel": "Start",
@@ -554,7 +554,7 @@
                 .on('zoom', (e) => g.attr('transform', e.transform));
             svg.call(zoom);
 
-            tree = d3.tree().nodeSize([250, 130]);
+            tree = d3.tree().nodeSize([160, 160]);
 
             root = d3.hierarchy(treeData, d => d.children);
             root.x0 = 0;
@@ -589,10 +589,10 @@
             if (d.children) d.children.forEach(expand);
         }
 
-        // Half-heights so links attach to rect edges, not centers.
-        const NODE_HALF_H = 28;       // decision rect (56 tall) half-height
-        const LEAF_HALF_H = 23;       // leaf rect (46 tall) half-height
-        function nodeHalfH(d) { return isLeaf(d) ? LEAF_HALF_H : NODE_HALF_H; }
+        // Radii so links attach to circle edges, not centers.
+        const NODE_R = 48;            // decision circle radius
+        const LEAF_R = 38;            // leaf circle radius
+        function nodeHalfH(d) { return isLeaf(d) ? LEAF_R : NODE_R; }
 
         function diagonal(s, d, sExtent, dExtent) {
             const sBottom = s.y + (sExtent ?? NODE_HALF_H);
@@ -608,16 +608,16 @@
             const data = d.data;
             if (isLeaf(d)) {
                 const matching = data.type === 'survived' ? data.survived : data.perished;
-                return `${matching} / ${data.samples}`;
+                return `${matching}/${data.samples}`;
             }
-            return `n=${data.samples} · ${data.survived} / ${data.perished}`;
+            return `${data.samples} · ${data.survived}/${data.perished}`;
         }
 
         // Comfortable zoom for reading individual nodes. centerOnNode
         // snaps UP to this scale but won't pull you back from a closer zoom.
         const FOCUS_SCALE = 1.2;
 
-        function centerOnNode(d, animate = true) {
+        function centerOnNode(d, animate = true, dur = 450) {
             if (!d || !svg) return;
             const t = d3.zoomTransform(svg.node());
             const k = Math.max(t.k, FOCUS_SCALE);
@@ -628,7 +628,7 @@
             const targetX = W / 2 - d.x * k;
             const targetY = topPad + usableH * 0.4 - d.y * k;
             const newT = d3.zoomIdentity.translate(targetX, targetY).scale(k);
-            const sel = animate ? svg.transition().duration(450) : svg;
+            const sel = animate ? svg.transition().duration(dur).ease(d3.easeCubicInOut) : svg;
             sel.call(zoom.transform, newT);
         }
 
@@ -637,7 +637,7 @@
             const nodes = layout.descendants();
             const links = layout.links();
 
-            nodes.forEach(d => d.y = d.depth * 130);
+            nodes.forEach(d => d.y = d.depth * 160);
 
             const node = g.selectAll('g.node')
                 .data(nodes, d => d.id || (d.id = ++nodeIdCounter));
@@ -677,14 +677,10 @@
                     document.getElementById('tooltip').style.opacity = 0;
                 });
 
-            // Rect (the card)
-            nodeEnter.append('rect')
-                .attr('x', d => isLeaf(d) ? -65 : -110)
-                .attr('y', d => isLeaf(d) ? -23 : -28)
-                .attr('width', d => isLeaf(d) ? 130 : 220)
-                .attr('height', d => isLeaf(d) ? 46 : 56)
-                .attr('rx', 8)
-                .attr('ry', 8);
+            // Circle (the card)
+            nodeEnter.append('circle')
+                .attr('class', 'card')
+                .attr('r', d => isLeaf(d) ? LEAF_R : NODE_R);
 
             // Title text (supports multi-line via \n in data.name)
             nodeEnter.append('text')
@@ -693,12 +689,12 @@
                     const el = d3.select(this);
                     const lines = String(d.data.name).split('\n');
                     const isLf = isLeaf(d);
-                    const lineH = 14;
+                    const lineH = 13;
                     let baseY;
                     if (isLf) {
-                        baseY = -5;
+                        baseY = -3;
                     } else {
-                        baseY = lines.length === 1 ? -9 : -17;
+                        baseY = lines.length === 1 ? -8 : -15;
                     }
                     lines.forEach((line, idx) => {
                         el.append('tspan')
@@ -712,14 +708,19 @@
             nodeEnter.append('text')
                 .attr('class', 'node-sub')
                 .attr('x', 0)
-                .attr('y', d => isLeaf(d) ? 13 : 9)
+                .attr('y', d => {
+                    if (isLeaf(d)) return 14;
+                    const lines = String(d.data.name).split('\n').length;
+                    return lines === 1 ? 9 : 14;
+                })
                 .text(d => formatSub(d));
 
-            // Class-proportion bar inside decision nodes
+            // Class-proportion bar inside decision circles (near bottom of circle)
             nodeEnter.filter(d => !isLeaf(d) && d.data.samples)
                 .each(function(d) {
                     const grp = d3.select(this);
-                    const barW = 180, barX = -barW / 2, barY = 18, barH = 4;
+                    // At y=24 inside r=48 circle, chord half-width = sqrt(48^2 - 24^2) ~ 41
+                    const barW = 60, barX = -barW / 2, barY = 26, barH = 4;
                     const survivedFrac = d.data.survived / d.data.samples;
                     grp.append('rect')
                         .attr('class', 'bar-bg')
@@ -822,7 +823,7 @@
             return !d.children && !d._children;
         }
 
-        function fitToScreen(animate) {
+        function fitToScreen(animate, dur = 600) {
             if (!g || !g.node()) return;
             const bounds = g.node().getBBox();
             if (!bounds.width || !bounds.height) return;
@@ -843,7 +844,7 @@
 
             const transform = d3.zoomIdentity.translate(tx, ty).scale(scale);
             if (animate) {
-                svg.transition().duration(600).call(zoom.transform, transform);
+                svg.transition().duration(dur).ease(d3.easeCubicInOut).call(zoom.transform, transform);
             } else {
                 svg.call(zoom.transform, transform);
             }
@@ -881,7 +882,6 @@
             currentQuizNode = root;
             quizPath = [root];
             showQuizState();
-            highlightPath(quizPath);
         }
 
         function showQuizState() {
@@ -911,7 +911,10 @@
 
                 optsEl.innerHTML = html;
                 restart.style.display = 'block';
-                centerOnNode(currentQuizNode);
+                // Quiz finished — highlight the full path and zoom out to
+                // show the whole tree so the user sees the decision in context.
+                highlightPath(quizPath);
+                fitToScreen(true, 1100);
                 return;
             }
 
@@ -933,11 +936,11 @@
                     currentQuizNode = child;
                     quizPath.push(child);
                     showQuizState();
-                    highlightPath(quizPath);
                 };
                 optsEl.appendChild(btn);
             });
-            centerOnNode(currentQuizNode);
+            highlightPath(quizPath);
+            centerOnNode(currentQuizNode, true, 900);
         }
 
         function highlightPath(pathNodes) {
