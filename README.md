@@ -45,7 +45,7 @@ This project implements a decision tree using the **Gini impurity** criterion fo
 
 An interactive visualization is automatically deployed via GitHub Actions:
 
-**https://xiaole5211314.github.io/Decision-Tree/**
+**https://qiankangwang.github.io/Decision-Tree/**
 
 The demo visualizes a decision tree trained on the Kaggle Titanic dataset (714 passengers with complete `pclass`/`sex`/`age`/`fare`, depth 5, 17 leaves, 82.9% training accuracy). You can click nodes to expand/collapse, pan and zoom, or use the **Predict Survival** panel to walk through the tree interactively.
 
