@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <style>
         :root {
-            --bg: #ffffff;
+            --bg: #fafbfc;
             --panel: #ffffff;
             --border: #e5e7eb;
             --border-strong: #d1d5db;
@@ -28,7 +28,7 @@
             --perished-fill: #fee2e2;
             --highlight: #d97706;
             --highlight-fill: #fef3c7;
-            --link: #d1d5db;
+            --link: #9ca3af;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -53,18 +53,19 @@
             align-items: center;
             gap: 24px;
         }
-        .header-title { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+        .header-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
         .header h1 {
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 600;
             color: var(--text);
             letter-spacing: -0.01em;
+            line-height: 1.2;
         }
         .header .subtitle {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-muted);
             max-width: 640px;
-            line-height: 1.5;
+            line-height: 1.4;
         }
         .controls {
             display: flex;
@@ -115,7 +116,7 @@
         .node circle {
             fill: var(--node-fill);
             stroke: var(--node-stroke);
-            stroke-width: 1.5px;
+            stroke-width: 2px;
             transition: stroke 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease;
             cursor: pointer;
         }
@@ -123,11 +124,11 @@
         .node circle.leaf-perished { stroke: var(--perished-stroke); fill: var(--perished-fill); }
         .node circle.collapsed { fill: var(--collapsed-fill); }
         .node circle:hover {
-            stroke-width: 2.5px;
+            stroke-width: 3px;
         }
         .node circle.highlighted {
             stroke: var(--highlight);
-            stroke-width: 3px;
+            stroke-width: 3.5px;
             fill: var(--highlight-fill);
         }
         .node text {
@@ -142,12 +143,12 @@
         .link {
             fill: none;
             stroke: var(--link);
-            stroke-width: 1.25px;
+            stroke-width: 1.75px;
             transition: stroke 0.2s ease, stroke-width 0.2s ease;
         }
         .link.highlighted {
             stroke: var(--highlight);
-            stroke-width: 2.25px;
+            stroke-width: 2.75px;
         }
         .link-label {
             font-size: 11px;
@@ -512,7 +513,7 @@
         // ========== D3 Tree Rendering ==========
         let container, svg, g, zoom, root, tree;
         let nodeIdCounter = 0;
-        const duration = 400;
+        let duration = 400;
 
         function initTree() {
             container = document.getElementById('tree-container');
@@ -525,7 +526,8 @@
 
             svg = d3.select('#tree-container').append('svg')
                 .attr('width', '100%')
-                .attr('height', '100%');
+                .attr('height', '100%')
+                .style('opacity', 0);
 
             g = svg.append('g');
 
@@ -540,10 +542,17 @@
             root.x0 = 0;
             root.y0 = 0;
 
+            // First render: no transition, no jump-into-place
+            duration = 0;
             update(root);
+            duration = 400;
+
             document.getElementById('loading').style.display = 'none';
 
-            setTimeout(() => fitToScreen(true), 100);
+            requestAnimationFrame(() => {
+                fitToScreen(false);
+                svg.transition().duration(200).style('opacity', 1);
+            });
         }
 
         function collapse(d) {
