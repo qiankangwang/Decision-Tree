@@ -113,50 +113,67 @@
         }
         #tree-container:active { cursor: grabbing; }
 
-        .node circle {
+        .node rect {
             fill: var(--node-fill);
             stroke: var(--node-stroke);
-            stroke-width: 2.5px;
-            transition: stroke 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease;
+            stroke-width: 1.5px;
             cursor: pointer;
+            transition: stroke 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease;
         }
-        .node circle.leaf-survived { stroke: var(--survived-stroke); fill: var(--survived-fill); }
-        .node circle.leaf-perished { stroke: var(--perished-stroke); fill: var(--perished-fill); }
-        .node circle.collapsed { fill: var(--collapsed-fill); }
-        .node circle:hover {
-            stroke-width: 3.5px;
-        }
-        .node circle.highlighted {
+        .node.leaf-survived rect { stroke: var(--survived-stroke); fill: var(--survived-fill); }
+        .node.leaf-perished rect { stroke: var(--perished-stroke); fill: var(--perished-fill); }
+        .node.collapsed rect { stroke-dasharray: 4 3; fill: var(--collapsed-fill); }
+        .node:hover rect { stroke-width: 2.5px; }
+        .node.highlighted rect {
             stroke: var(--highlight);
-            stroke-width: 4px;
+            stroke-width: 2.5px;
             fill: var(--highlight-fill);
         }
-        .node text {
+
+        .node .node-title {
             font-size: 13px;
+            font-weight: 600;
             fill: var(--text);
             text-anchor: middle;
-            dominant-baseline: middle;
             pointer-events: none;
-            font-weight: 600;
         }
+        .node .node-sub {
+            font-size: 10.5px;
+            fill: var(--text-muted);
+            text-anchor: middle;
+            pointer-events: none;
+            font-variant-numeric: tabular-nums;
+        }
+        .node.leaf-survived .node-sub { fill: var(--survived-stroke); }
+        .node.leaf-perished .node-sub { fill: var(--perished-stroke); }
+
+        /* Class-proportion bar inside decision nodes */
+        .node .bar-bg { fill: #e5e7eb; }
+        .node .bar-survived { fill: var(--survived-stroke); }
+        .node .bar-perished { fill: var(--perished-stroke); }
 
         .link {
             fill: none;
             stroke: var(--link);
-            stroke-width: 2px;
+            stroke-width: 1.5px;
             transition: stroke 0.2s ease, stroke-width 0.2s ease;
         }
         .link.highlighted {
             stroke: var(--highlight);
-            stroke-width: 3px;
+            stroke-width: 2.5px;
         }
         .link-label {
-            font-size: 11.5px;
+            font-size: 11px;
             fill: var(--text);
             text-anchor: middle;
             font-weight: 500;
+            font-variant-numeric: tabular-nums;
         }
-        .link-label-bg { fill: var(--bg); }
+        .link-label-bg {
+            fill: var(--bg);
+            stroke: var(--border);
+            stroke-width: 1px;
+        }
 
         /* ---------- Quiz panel ---------- */
         .quiz-panel {
@@ -537,7 +554,7 @@
                 .on('zoom', (e) => g.attr('transform', e.transform));
             svg.call(zoom);
 
-            tree = d3.tree().nodeSize([70, 220]);
+            tree = d3.tree().nodeSize([250, 130]);
 
             root = d3.hierarchy(treeData, d => d.children);
             root.x0 = 0;
@@ -572,11 +589,41 @@
             if (d.children) d.children.forEach(expand);
         }
 
-        function diagonal(s, d) {
-            return `M ${s.x} ${s.y}
-                    C ${s.x} ${(s.y + d.y) / 2},
-                      ${d.x} ${(s.y + d.y) / 2},
-                      ${d.x} ${d.y}`;
+        // Half-heights so links attach to rect edges, not centers.
+        const NODE_HALF_H = 28;       // decision rect (56 tall) half-height
+        const LEAF_HALF_H = 23;       // leaf rect (46 tall) half-height
+        function nodeHalfH(d) { return isLeaf(d) ? LEAF_HALF_H : NODE_HALF_H; }
+
+        function diagonal(s, d, sExtent, dExtent) {
+            const sBottom = s.y + (sExtent ?? NODE_HALF_H);
+            const dTop = d.y - (dExtent ?? NODE_HALF_H);
+            const midY = (sBottom + dTop) / 2;
+            return `M ${s.x} ${sBottom}
+                    C ${s.x} ${midY},
+                      ${d.x} ${midY},
+                      ${d.x} ${dTop}`;
+        }
+
+        function formatSub(d) {
+            const data = d.data;
+            if (isLeaf(d)) {
+                const matching = data.type === 'survived' ? data.survived : data.perished;
+                return `${matching} / ${data.samples}`;
+            }
+            return `n=${data.samples} · ${data.survived} / ${data.perished}`;
+        }
+
+        function centerOnNode(d, animate = true) {
+            if (!d || !svg) return;
+            const t = d3.zoomTransform(svg.node());
+            const W = container.clientWidth, H = container.clientHeight;
+            const topPad = 80;
+            const usableH = H - topPad - 30;
+            const targetX = W / 2 - d.x * t.k;
+            const targetY = topPad + usableH / 2 - d.y * t.k;
+            const newT = d3.zoomIdentity.translate(targetX, targetY).scale(t.k);
+            const sel = animate ? svg.transition().duration(450) : svg;
+            sel.call(zoom.transform, newT);
         }
 
         function update(source) {
@@ -584,13 +631,14 @@
             const nodes = layout.descendants();
             const links = layout.links();
 
-            nodes.forEach(d => d.y = d.depth * 220);
+            nodes.forEach(d => d.y = d.depth * 130);
 
             const node = g.selectAll('g.node')
                 .data(nodes, d => d.id || (d.id = ++nodeIdCounter));
 
             const nodeEnter = node.enter().append('g')
                 .attr('class', 'node')
+                .style('opacity', 0)
                 .attr('transform', () => `translate(${source.x0},${source.y0})`)
                 .on('click', (e, d) => {
                     if (d.children) {
@@ -599,8 +647,11 @@
                     } else if (d._children) {
                         d.children = d._children;
                         d._children = null;
+                    } else {
+                        return; // leaf: nothing to do
                     }
                     update(d);
+                    centerOnNode(d);
                 })
                 .on('mouseover', function(e, d) {
                     const tooltip = document.getElementById('tooltip');
@@ -620,42 +671,82 @@
                     document.getElementById('tooltip').style.opacity = 0;
                 });
 
-            nodeEnter.append('circle')
-                .attr('r', 1e-6);
+            // Rect (the card)
+            nodeEnter.append('rect')
+                .attr('x', d => isLeaf(d) ? -65 : -110)
+                .attr('y', d => isLeaf(d) ? -23 : -28)
+                .attr('width', d => isLeaf(d) ? 130 : 220)
+                .attr('height', d => isLeaf(d) ? 46 : 56)
+                .attr('rx', 8)
+                .attr('ry', 8);
 
+            // Title text (supports multi-line via \n in data.name)
             nodeEnter.append('text')
-                .attr('dy', d => isLeaf(d) ? 44 : -24)
+                .attr('class', 'node-title')
                 .each(function(d) {
                     const el = d3.select(this);
                     const lines = String(d.data.name).split('\n');
+                    const isLf = isLeaf(d);
+                    const lineH = 14;
+                    let baseY;
+                    if (isLf) {
+                        baseY = -5;
+                    } else {
+                        baseY = lines.length === 1 ? -9 : -17;
+                    }
                     lines.forEach((line, idx) => {
                         el.append('tspan')
                             .attr('x', 0)
-                            .attr('dy', idx === 0 ? 0 : '1.2em')
+                            .attr('y', baseY + idx * lineH)
                             .text(line);
                     });
                 });
 
-            const nodeUpdate = node.merge(nodeEnter);
+            // Sub line (sample counts)
+            nodeEnter.append('text')
+                .attr('class', 'node-sub')
+                .attr('x', 0)
+                .attr('y', d => isLeaf(d) ? 13 : 9)
+                .text(d => formatSub(d));
 
-            nodeUpdate.transition().duration(duration)
-                .attr('transform', d => `translate(${d.x},${d.y})`);
-
-            nodeUpdate.select('circle')
-                .attr('r', d => isLeaf(d) ? 26 : 18)
-                .attr('class', d => {
-                    let cls = '';
-                    if (d.data.type === 'survived') cls = 'leaf-survived';
-                    else if (d.data.type === 'perished') cls = 'leaf-perished';
-                    if (d._children) cls += ' collapsed';
-                    return cls.trim();
+            // Class-proportion bar inside decision nodes
+            nodeEnter.filter(d => !isLeaf(d) && d.data.samples)
+                .each(function(d) {
+                    const grp = d3.select(this);
+                    const barW = 180, barX = -barW / 2, barY = 18, barH = 4;
+                    const survivedFrac = d.data.survived / d.data.samples;
+                    grp.append('rect')
+                        .attr('class', 'bar-bg')
+                        .attr('x', barX).attr('y', barY)
+                        .attr('width', barW).attr('height', barH)
+                        .attr('rx', 2);
+                    grp.append('rect')
+                        .attr('class', 'bar-survived')
+                        .attr('x', barX).attr('y', barY)
+                        .attr('width', Math.max(2, barW * survivedFrac))
+                        .attr('height', barH)
+                        .attr('rx', 2);
                 });
 
+            const nodeUpdate = node.merge(nodeEnter);
+
+            nodeUpdate
+                .attr('class', d => {
+                    let cls = 'node';
+                    if (d.data.type === 'survived') cls += ' leaf-survived';
+                    else if (d.data.type === 'perished') cls += ' leaf-perished';
+                    if (d._children) cls += ' collapsed';
+                    return cls;
+                });
+
+            nodeUpdate.transition().duration(duration)
+                .style('opacity', 1)
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+
             const nodeExit = node.exit().transition().duration(duration)
+                .style('opacity', 0)
                 .attr('transform', () => `translate(${source.x},${source.y})`)
                 .remove();
-            nodeExit.select('circle').attr('r', 1e-6);
-            nodeExit.select('text').style('fill-opacity', 1e-6);
 
             const link = g.selectAll('path.link')
                 .data(links, d => d.target.id);
@@ -664,16 +755,16 @@
                 .attr('class', 'link')
                 .attr('d', () => {
                     const o = { x: source.x0, y: source.y0 };
-                    return diagonal(o, o);
+                    return diagonal(o, o, 0, 0);
                 });
 
             link.merge(linkEnter).transition().duration(duration)
-                .attr('d', d => diagonal(d.source, d.target));
+                .attr('d', d => diagonal(d.source, d.target, nodeHalfH(d.source), nodeHalfH(d.target)));
 
             link.exit().transition().duration(duration)
                 .attr('d', () => {
                     const o = { x: source.x, y: source.y };
-                    return diagonal(o, o);
+                    return diagonal(o, o, 0, 0);
                 })
                 .remove();
 
@@ -697,7 +788,11 @@
 
             labelUpdate.transition().duration(duration)
                 .attr('opacity', 1)
-                .attr('transform', d => `translate(${(d.source.x + d.target.x) / 2}, ${(d.source.y + d.target.y) / 2})`);
+                .attr('transform', d => {
+                    const sBottom = d.source.y + nodeHalfH(d.source);
+                    const dTop = d.target.y - nodeHalfH(d.target);
+                    return `translate(${(d.source.x + d.target.x) / 2}, ${(sBottom + dTop) / 2})`;
+                });
 
             labelUpdate.each(function() {
                 const text = d3.select(this).select('text');
@@ -810,6 +905,7 @@
 
                 optsEl.innerHTML = html;
                 restart.style.display = 'block';
+                centerOnNode(currentQuizNode);
                 return;
             }
 
@@ -835,6 +931,7 @@
                 };
                 optsEl.appendChild(btn);
             });
+            centerOnNode(currentQuizNode);
         }
 
         function highlightPath(pathNodes) {
@@ -842,14 +939,14 @@
             const pathIds = new Set(pathNodes.map(d => d.id));
             const linkTargets = new Set(pathNodes.slice(1).map(d => d.id));
 
-            d3.selectAll('.node circle')
+            d3.selectAll('g.node')
                 .classed('highlighted', d => pathIds.has(d.id));
             d3.selectAll('.link')
                 .classed('highlighted', d => linkTargets.has(d.target.id));
         }
 
         function resetHighlight() {
-            d3.selectAll('.node circle').classed('highlighted', false);
+            d3.selectAll('g.node').classed('highlighted', false);
             d3.selectAll('.link').classed('highlighted', false);
         }
 
