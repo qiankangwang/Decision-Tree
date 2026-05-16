@@ -19,16 +19,16 @@
             --inset: #f9fafb;
             --tag-bg: #f3f4f6;
             --option-hover: #eff6ff;
-            --node-stroke: #2563eb;
-            --node-fill: #ffffff;
-            --collapsed-fill: #dbeafe;
-            --survived-stroke: #059669;
-            --survived-fill: #d1fae5;
-            --perished-stroke: #dc2626;
-            --perished-fill: #fee2e2;
-            --highlight: #d97706;
-            --highlight-fill: #fef3c7;
-            --link: #9ca3af;
+            --node-stroke: #1d4ed8;
+            --node-fill: #eff6ff;
+            --collapsed-fill: #bfdbfe;
+            --survived-stroke: #047857;
+            --survived-fill: #a7f3d0;
+            --perished-stroke: #b91c1c;
+            --perished-fill: #fecaca;
+            --highlight: #b45309;
+            --highlight-fill: #fde68a;
+            --link: #6b7280;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -116,7 +116,7 @@
         .node circle {
             fill: var(--node-fill);
             stroke: var(--node-stroke);
-            stroke-width: 2px;
+            stroke-width: 2.5px;
             transition: stroke 0.2s ease, stroke-width 0.2s ease, fill 0.2s ease;
             cursor: pointer;
         }
@@ -124,36 +124,37 @@
         .node circle.leaf-perished { stroke: var(--perished-stroke); fill: var(--perished-fill); }
         .node circle.collapsed { fill: var(--collapsed-fill); }
         .node circle:hover {
-            stroke-width: 3px;
+            stroke-width: 3.5px;
         }
         .node circle.highlighted {
             stroke: var(--highlight);
-            stroke-width: 3.5px;
+            stroke-width: 4px;
             fill: var(--highlight-fill);
         }
         .node text {
-            font-size: 12px;
+            font-size: 13px;
             fill: var(--text);
             text-anchor: middle;
             dominant-baseline: middle;
             pointer-events: none;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .link {
             fill: none;
             stroke: var(--link);
-            stroke-width: 1.75px;
+            stroke-width: 2px;
             transition: stroke 0.2s ease, stroke-width 0.2s ease;
         }
         .link.highlighted {
             stroke: var(--highlight);
-            stroke-width: 2.75px;
+            stroke-width: 3px;
         }
         .link-label {
-            font-size: 11px;
-            fill: var(--text-muted);
+            font-size: 11.5px;
+            fill: var(--text);
             text-anchor: middle;
+            font-weight: 500;
         }
         .link-label-bg { fill: var(--bg); }
 
@@ -536,7 +537,7 @@
                 .on('zoom', (e) => g.attr('transform', e.transform));
             svg.call(zoom);
 
-            tree = d3.tree().nodeSize([62, 200]);
+            tree = d3.tree().nodeSize([70, 220]);
 
             root = d3.hierarchy(treeData, d => d.children);
             root.x0 = 0;
@@ -583,7 +584,7 @@
             const nodes = layout.descendants();
             const links = layout.links();
 
-            nodes.forEach(d => d.y = d.depth * 200);
+            nodes.forEach(d => d.y = d.depth * 220);
 
             const node = g.selectAll('g.node')
                 .data(nodes, d => d.id || (d.id = ++nodeIdCounter));
@@ -623,7 +624,7 @@
                 .attr('r', 1e-6);
 
             nodeEnter.append('text')
-                .attr('dy', d => isLeaf(d) ? 38 : -20)
+                .attr('dy', d => isLeaf(d) ? 44 : -24)
                 .each(function(d) {
                     const el = d3.select(this);
                     const lines = String(d.data.name).split('\n');
@@ -641,7 +642,7 @@
                 .attr('transform', d => `translate(${d.x},${d.y})`);
 
             nodeUpdate.select('circle')
-                .attr('r', d => isLeaf(d) ? 22 : 15)
+                .attr('r', d => isLeaf(d) ? 26 : 18)
                 .attr('class', d => {
                     let cls = '';
                     if (d.data.type === 'survived') cls = 'leaf-survived';
