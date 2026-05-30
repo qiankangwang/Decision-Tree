@@ -20,8 +20,8 @@ struct Passenger {
 
 struct TreeNode {
     std::string feature;
-    double splitValue;
-    int category;
+    double splitValue = 0.0;
+    int category = -1;
     std::unique_ptr<TreeNode> leftChild;
     std::unique_ptr<TreeNode> rightChild;
 
@@ -30,6 +30,8 @@ struct TreeNode {
 
     explicit TreeNode(int cat)
         : category(cat) {}
+
+    bool isLeaf() const { return !leftChild && !rightChild; }
 };
 
 std::vector<Passenger> readPassengers(const std::string& filename);
@@ -39,9 +41,10 @@ double findBestSplit(const std::vector<Passenger>& passengers);
 double calculateGiniAtSplit(const std::vector<Passenger>& passengers, double splitAge);
 double calculateGiniForSex(const std::vector<Passenger>& passengers);
 double calculateGiniForPclass(const std::vector<Passenger>& passengers);
-double findBestSplitForPclass(const std::vector<Passenger>& passengers);
+double findBestSplitForPclass(const std::vector<Passenger>& passengers, double& outGini);
+double nodeGini(const std::vector<Passenger>& passengers);
 
-std::unique_ptr<TreeNode> buildDecisionTree(const std::vector<Passenger>& passengers, int depth, std::set<std::string>& usedFeatures);
+std::unique_ptr<TreeNode> buildDecisionTree(const std::vector<Passenger>& passengers, int depth, std::set<std::string> usedFeatures);
 void printTreePreorder(const TreeNode* node);
 double calculateAccuracy(const std::vector<Passenger>& passengers, const TreeNode* root);
 void exportTreeToJson(const TreeNode* root, const std::string& filename);

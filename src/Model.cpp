@@ -1,4 +1,5 @@
 #include "DecisionTree.h"
+#include <limits>
 
 const int MIN_SIZE = 2;
 const int MAX_DEPTH = 5;
@@ -33,6 +34,7 @@ int findMostCommonCategory(const std::vector<Passenger>& passengers) {
         }
     }
 
+    // A 50/50 tie is classified as 0 (perished).
     return (countSurvived > countNotSurvived) ? 1 : 0;
 }
 
@@ -42,9 +44,18 @@ void partitionPassengers(const std::vector<Passenger>& passengers,
                          std::vector<Passenger>& leftSubSet,
                          std::vector<Passenger>& rightSubSet) {
     for (const auto& passenger : passengers) {
-        if (bestFeature == "Sex" && passenger.sex <= bestSplit) {
-            leftSubSet.push_back(passenger);
-        } else if (bestFeature == "Pclass" && passenger.pclass == bestSplit) {
+        bool goLeft;
+        if (bestFeature == "Sex") {
+            goLeft = passenger.sex <= bestSplit;
+        } else if (bestFeature == "Pclass") {
+            goLeft = passenger.pclass == static_cast<int>(bestSplit);
+        } else if (bestFeature == "Age") {
+            goLeft = passenger.age <= bestSplit;
+        } else {
+            goLeft = false;
+        }
+
+        if (goLeft) {
             leftSubSet.push_back(passenger);
         } else {
             rightSubSet.push_back(passenger);
@@ -54,9 +65,13 @@ void partitionPassengers(const std::vector<Passenger>& passengers,
 
 std::unique_ptr<TreeNode> buildDecisionTree(const std::vector<Passenger>& passengers,
                                             int depth,
-                                            std::set<std::string>& usedFeatures) {
-    if (passengers.empty() || depth > MAX_DEPTH) {
+                                            std::set<std::string> usedFeatures) {
+    if (passengers.empty()) {
         return nullptr;
+    }
+
+    if (depth > MAX_DEPTH) {
+        return std::make_unique<TreeNode>(findMostCommonCategory(passengers));
     }
 
     if (passengers.size() < static_cast<size_t>(MIN_SIZE) || isPure(passengers)) {
@@ -66,7 +81,7 @@ std::unique_ptr<TreeNode> buildDecisionTree(const std::vector<Passenger>& passen
 
     std::string bestFeature;
     double bestSplit = -1;
-    double minGini = 999999999.99;
+    double minGini = std::numeric_limits<double>::max();
     bool improved = false;
 
     if (usedFeatures.find("Sex") == usedFeatures.end()) {
@@ -80,24 +95,44 @@ std::unique_ptr<TreeNode> buildDecisionTree(const std::vector<Passenger>& passen
     }
 
     if (usedFeatures.find("Pclass") == usedFeatures.end()) {
-        double giniPclass = calculateGiniForPclass(passengers);
-        if (giniPclass < minGini) {
+        double giniPclass;
+        double pclassSplit = findBestSplitForPclass(passengers, giniPclass);
+        if (pclassSplit != -1.0 && giniPclass < minGini) {
             minGini = giniPclass;
             bestFeature = "Pclass";
-            bestSplit = findBestSplitForPclass(passengers);
+            bestSplit = pclassSplit;
             improved = true;
         }
     }
 
-    if (!improved) {
-        int commonCategory = findMostCommonCategory(passengers);
-        return std::make_unique<TreeNode>(commonCategory);
+    if (usedFeatures.find("Age") == usedFeatures.end()) {
+        double splitAge = findBestSplit(passengers);
+        if (splitAge != -1.0) {
+            double giniAge = calculateGiniAtSplit(passengers, splitAge);
+            if (giniAge < minGini) {
+                minGini = giniAge;
+                bestFeature = "Age";
+                bestSplit = splitAge;
+                improved = true;
+            }
+        }
+    }
+
+    // Information-gain stop: only split if the best candidate strictly reduces impurity.
+    double parentGini = nodeGini(passengers);
+    if (!improved || minGini >= parentGini - 1e-12) {
+        return std::make_unique<TreeNode>(findMostCommonCategory(passengers));
     }
 
     usedFeatures.insert(bestFeature);
 
     std::vector<Passenger> leftSubSet, rightSubSet;
     partitionPassengers(passengers, bestFeature, bestSplit, leftSubSet, rightSubSet);
+
+    // Degenerate split (everything went one way): make a majority leaf so no child is null.
+    if (leftSubSet.empty() || rightSubSet.empty()) {
+        return std::make_unique<TreeNode>(findMostCommonCategory(passengers));
+    }
 
     auto node = std::make_unique<TreeNode>(bestFeature, bestSplit);
     node->leftChild = buildDecisionTree(leftSubSet, depth + 1, usedFeatures);
@@ -108,7 +143,7 @@ std::unique_ptr<TreeNode> buildDecisionTree(const std::vector<Passenger>& passen
 
 void printTreePreorder(const TreeNode* node) {
     if (node == nullptr) return;
-    if (node->category != -1) {
+    if (node->isLeaf()) {
         std::cout << "Category: " << node->category << " ";
     } else {
         std::cout << node->feature << ": " << node->splitValue << " ";

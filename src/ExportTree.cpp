@@ -1,19 +1,44 @@
 #include "DecisionTree.h"
 #include <fstream>
 #include <iomanip>
+#include <sstream>
+
+static std::string jsonEscape(const std::string& s) {
+    std::ostringstream out;
+    for (char c : s) {
+        switch (c) {
+            case '\\': out << "\\\\"; break;
+            case '"':  out << "\\\""; break;
+            case '\b': out << "\\b"; break;
+            case '\f': out << "\\f"; break;
+            case '\n': out << "\\n"; break;
+            case '\r': out << "\\r"; break;
+            case '\t': out << "\\t"; break;
+            default:
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    out << "\\u" << std::hex << std::setw(4) << std::setfill('0')
+                        << static_cast<int>(static_cast<unsigned char>(c));
+                    out << std::dec << std::setfill(' ');
+                } else {
+                    out << c;
+                }
+        }
+    }
+    return out.str();
+}
 
 static void exportNodeToJson(const TreeNode* node, std::ofstream& out, int indentLevel, const std::string& edgeLabel) {
     std::string indent(indentLevel * 2, ' ');
     out << indent << "{\n";
 
     if (!edgeLabel.empty()) {
-        out << indent << "  \"edgeLabel\": \"" << edgeLabel << "\",\n";
+        out << indent << "  \"edgeLabel\": \"" << jsonEscape(edgeLabel) << "\",\n";
     }
 
     std::string name;
-    if (node->category != -1) {
+    if (node->isLeaf()) {
         name = (node->category == 1) ? "Survived" : "Perished";
-        out << indent << "  \"name\": \"" << name << "\",\n";
+        out << indent << "  \"name\": \"" << jsonEscape(name) << "\",\n";
         out << indent << "  \"type\": \"" << (node->category == 1 ? "survived" : "perished") << "\"\n";
     } else {
         if (node->feature == "Sex") {
@@ -25,7 +50,7 @@ static void exportNodeToJson(const TreeNode* node, std::ofstream& out, int inden
         } else {
             name = node->feature + " <= " + std::to_string(node->splitValue) + "?";
         }
-        out << indent << "  \"name\": \"" << name << "\"";
+        out << indent << "  \"name\": \"" << jsonEscape(name) << "\"";
 
         if (node->leftChild || node->rightChild) {
             out << ",\n" << indent << "  \"children\": [\n";

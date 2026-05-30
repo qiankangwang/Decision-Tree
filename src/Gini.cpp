@@ -1,5 +1,8 @@
 #include "DecisionTree.h"
 #include <algorithm>
+#include <limits>
+
+static double calculateGini(const int counts[2], double total);
 
 double calculateGiniForSex(const std::vector<Passenger>& passengers) {
     double countFemale = 0, countMale = 0;
@@ -67,7 +70,7 @@ double calculateGiniForPclass(const std::vector<Passenger>& passengers) {
     return totalGini;
 }
 
-double findBestSplitForPclass(const std::vector<Passenger>& passengers) {
+double findBestSplitForPclass(const std::vector<Passenger>& passengers, double& outGini) {
     int counts[3] = { 0, 0, 0 };
     int survivedCounts[3] = { 0, 0, 0 };
 
@@ -81,23 +84,58 @@ double findBestSplitForPclass(const std::vector<Passenger>& passengers) {
         }
     }
 
-    double bestGini = 1.0;
+    double total = static_cast<double>(passengers.size());
+    double bestGini = std::numeric_limits<double>::max();
     double bestSplit = -1;
-    double total = passengers.size();
 
-    for (int i = 0; i < 3; i++) {
-        if (counts[i] > 0) {
-            double pSurvived = static_cast<double>(survivedCounts[i]) / counts[i];
-            double gini = 1 - (pSurvived * pSurvived) - (1 - pSurvived) * (1 - pSurvived);
-            double weightedGini = (counts[i] / total) * gini;
-            if (weightedGini < bestGini) {
-                bestGini = weightedGini;
-                bestSplit = i + 1;
+    // The tree performs a binary one-vs-rest split (pclass == c -> left, else right),
+    // so rank each present class by the binary one-vs-rest weighted Gini and pick the lowest.
+    for (int c = 0; c < 3; c++) {
+        if (counts[c] == 0) {
+            continue;
+        }
+
+        int inCount = counts[c];
+        int inSurvived = survivedCounts[c];
+        int outCount = 0;
+        int outSurvived = 0;
+        for (int j = 0; j < 3; j++) {
+            if (j != c) {
+                outCount += counts[j];
+                outSurvived += survivedCounts[j];
             }
+        }
+
+        double pIn = inCount > 0 ? static_cast<double>(inSurvived) / inCount : 0.0;
+        double pOut = outCount > 0 ? static_cast<double>(outSurvived) / outCount : 0.0;
+        double giniIn = 1 - (pIn * pIn) - (1 - pIn) * (1 - pIn);
+        double giniOut = 1 - (pOut * pOut) - (1 - pOut) * (1 - pOut);
+
+        double weightedGini = 0.0;
+        if (total > 0) {
+            weightedGini = (inCount / total) * giniIn + (outCount / total) * giniOut;
+        }
+
+        if (weightedGini < bestGini) {
+            bestGini = weightedGini;
+            bestSplit = c + 1;
         }
     }
 
+    outGini = (bestSplit == -1) ? std::numeric_limits<double>::max() : bestGini;
     return bestSplit;
+}
+
+// Node impurity over the survived label (binary Gini of the whole set).
+double nodeGini(const std::vector<Passenger>& passengers) {
+    if (passengers.empty()) {
+        return 0.0;
+    }
+    int counts[2] = { 0, 0 };
+    for (const auto& p : passengers) {
+        counts[p.survived ? 1 : 0]++;
+    }
+    return calculateGini(counts, static_cast<double>(passengers.size()));
 }
 
 static double calculateGini(const int counts[2], double total) {
