@@ -13,12 +13,21 @@ def convert_kaggle_to_simple(input_csv: str, output_txt: str):
     # survived, pclass, sex, age, sibsp, parch, fare, embarked
     df = df[["survived", "pclass", "sex", "age", "sibsp", "parch", "fare", "embarked"]].copy()
 
-    # Drop rows with missing values
+    # Encode categorical fields BEFORE dropping NaNs, so any value that is not in
+    # the mapping (or is already missing) becomes NaN and gets dropped below.
+    # Lowercase both sex and embarked first to be robust to casing.
+    df["sex"] = df["sex"].str.lower().map({"male": 0, "female": 1})
+    df["embarked"] = df["embarked"].str.lower().map({"s": 0, "c": 1, "q": 2})
+
+    # Drop rows with missing values (including unmapped categoricals)
     df = df.dropna()
 
-    # Encode categorical fields
-    df["sex"] = df["sex"].map({"male": 0, "female": 1})
-    df["embarked"] = df["embarked"].str.lower().map({"s": 0, "c": 1, "q": 2})
+    # Integer columns must be written without a trailing '.0' — pandas promotes
+    # int columns to float64 once any NaN is present, and the C++ reader parses
+    # these with `iss >> int`, which fails on '1.0'. Cast them back to int.
+    # age and fare stay float (the C++ reader parses them with `iss >> double`).
+    int_cols = ["survived", "pclass", "sex", "sibsp", "parch", "embarked"]
+    df[int_cols] = df[int_cols].astype(int)
 
     # Write as space-separated values (no header)
     df.to_csv(output_txt, sep=" ", header=False, index=False)

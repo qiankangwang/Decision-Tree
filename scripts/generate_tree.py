@@ -1,9 +1,9 @@
 import json
 import sys
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier, _tree
+from sklearn.tree import DecisionTreeClassifier, _tree, export_text
 
-CSV_PATH = "titanic.csv"
+DEFAULT_CSV_PATH = "titanic.csv"
 
 # Feature mapping for display
 FEATURE_NAMES = {
@@ -94,11 +94,13 @@ def build_tree_json(tree, feature_names, node_id=0):
 
 
 def main():
+    csv_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CSV_PATH
+
     # Load data (Kaggle Titanic format compatible)
     try:
-        df = pd.read_csv(CSV_PATH)
+        df = pd.read_csv(csv_path)
     except FileNotFoundError:
-        print(f"Error: {CSV_PATH} not found.")
+        print(f"Error: {csv_path} not found.")
         print("Download the Kaggle Titanic train.csv and save it as titanic.csv")
         sys.exit(1)
 
@@ -138,7 +140,6 @@ def main():
 
     print("Saved tree structure to tree_data.json")
     print("\n--- Tree Rules ---")
-    from sklearn.tree import export_text
     print(export_text(clf, feature_names=["pclass", "sex", "age", "fare"]))
 
 

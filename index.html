@@ -601,6 +601,7 @@
         const NODE_R = 48;            // decision circle radius
         const LEAF_R = 38;            // leaf circle radius
         const RING_R = NODE_R + 6;    // proportion ring sits 6px outside the circle
+        const NODE_HALF_H = RING_R + 1; // fallback half-height when an explicit extent isn't passed
         function nodeHalfH(d) { return isLeaf(d) ? LEAF_R : RING_R + 1; }
 
         function diagonal(s, d, sExtent, dExtent) {

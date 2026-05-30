@@ -55,10 +55,10 @@ The demo visualizes a decision tree trained on the Kaggle Titanic dataset (714 p
 
 ```bash
 make
-./decision_tree processed_train.txt
+./decision_tree
 ```
 
-The program trains on the provided dataset, prints the tree in preorder, reports accuracy, and exports the tree structure to `tree_cpp.json`.
+This trains on the committed sample dataset (`processed_train_simple.txt`, the default), prints the tree in preorder, reports accuracy, and exports the tree structure to `tree_cpp.json`. Pass a different data file as the first argument to train on your own data, e.g. `./decision_tree processed_train_simple.txt`.
 
 ### Training on the Full Kaggle Dataset
 
@@ -69,7 +69,7 @@ The program trains on the provided dataset, prints the tree in preorder, reports
 python scripts/convert_kaggle.py train.csv processed_train.txt
 ```
 
-3. Build and run:
+3. Build and run on the file you just generated:
 
 ```bash
 make
@@ -91,7 +91,7 @@ python scripts/generate_tree.py   # writes tree_data.json
 
 Then replace the `treeData` object in `index.html` with the contents of `tree_data.json`.
 
-The C++ program also exports its own (shallower) tree to `tree_cpp.json` on each run, which can be embedded the same way if you want the demo to reflect the from-scratch implementation instead.
+The C++ program also exports its own (shallower) tree to `tree_cpp.json` on each run. Note that this file carries only the tree *structure* (`name`/`type`/`edgeLabel`/`children`) — it does not include the per-node `samples`/`survived`/`perished`/`desc` fields that the demo's proportion rings and tooltips read. Embedding it as-is would leave those visual elements empty; you would first need to augment the C++ export with those extra fields. The demo therefore ships with the richer sklearn-exported data by default.
 
 ## How It Works
 
