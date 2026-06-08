@@ -1,6 +1,6 @@
 # Decision Tree from Scratch
 
-[![Live demo](https://img.shields.io/badge/live%20demo-online-2ea44f?style=flat)](https://qiankangwang.github.io/Decision-Tree/)
+[![Live demo](assets/live-demo.svg)](https://qiankangwang.github.io/Decision-Tree/)
 
 A from-scratch C++ implementation of a decision tree classifier, built to understand the core mechanics of tree-based machine learning algorithms.
 
