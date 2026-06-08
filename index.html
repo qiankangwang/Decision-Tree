@@ -662,8 +662,6 @@
             const nodes = layout.descendants();
             const links = layout.links();
 
-            nodes.forEach(d => d.y = d.depth * 160);
-
             const node = g.selectAll('g.node')
                 .data(nodes, d => d.id || (d.id = ++nodeIdCounter));
 

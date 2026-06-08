@@ -13,10 +13,6 @@ FEATURE_NAMES = {
     "fare": "Fare",
 }
 
-EDGE_LABELS = {
-    "sex": {True: "Female", False: "Male"},
-}
-
 
 def build_tree_json(tree, feature_names, node_id=0):
     """Recursively convert sklearn tree to JSON for D3 visualization."""
