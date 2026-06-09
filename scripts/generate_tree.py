@@ -100,11 +100,21 @@ def main():
         print("Download the Kaggle Titanic train.csv and save it as titanic.csv")
         sys.exit(1)
 
+    # Normalize column names (Kaggle uses Title Case, some sources use
+    # lowercase) — same normalization as convert_kaggle.py. Without this,
+    # following the error message above with a real Kaggle train.csv would
+    # crash on the lowercase column selection below.
+    df.columns = [c.lower() for c in df.columns]
+
     # Select columns matching the project + fare for richer tree
     # The C++ project uses: survived, pclass, sex, age, sibsp, parch, fare, embarked
     # We keep pclass, sex, age, fare for the demo tree
-    df = df[["survived", "pclass", "sex", "age", "fare"]].dropna()
-    df["sex"] = df["sex"].map({"male": 0, "female": 1})
+    df = df[["survived", "pclass", "sex", "age", "fare"]].copy()
+    # Encode sex BEFORE dropna (and lowercase first), mirroring
+    # convert_kaggle.py: an unmapped value becomes NaN and is dropped below,
+    # instead of slipping through as NaN and crashing sklearn's fit().
+    df["sex"] = df["sex"].str.lower().map({"male": 0, "female": 1})
+    df = df.dropna()
 
     X = df[["pclass", "sex", "age", "fare"]]
     y = df["survived"]
