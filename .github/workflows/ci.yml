@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: make
+      - name: Smoke run
+        run: |
+          # Run from a temp dir so generated output (tree_cpp.json) never
+          # lands in the checkout; feed the sample dataset from the repo.
+          tmp="$(mktemp -d)"
+          cd "$tmp"
+          "$GITHUB_WORKSPACE/decision_tree" "$GITHUB_WORKSPACE/processed_train_simple.txt"
+          test -s tree_cpp.json
+          python3 -m json.tool tree_cpp.json > /dev/null
+          echo "Smoke run OK: tree_cpp.json is valid JSON"
